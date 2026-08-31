@@ -1,0 +1,13 @@
+{
+  "status": "research vectors; candidate layout, not normative",
+  "layout": "spec/tier0-candidate-layout-v0.1.md",
+  "source_corpus_sha256": "ac1f8ba0474d2def22b736a737305681144d6fae86ce327ce978ec1b24c783d5",
+  "vectors": [
+    {"semantic_type":"HAZARD","normalized_object":{"type":1,"priority":3,"source_ref":2701131777,"hazard_class":1,"severity":3,"confidence":124,"x":26,"y":4,"z":0,"radius":10,"ttl":30},"wire_hex":"0700a1000001017f00680100002878","wire_bytes":15},
+    {"semantic_type":"REQUEST","normalized_object":{"type":2,"priority":2,"source_ref":2701131777,"request_class":2,"target_ref":2969567234,"x":16,"y":0,"radius":12,"ttl":57},"wire_hex":"0a00a100000102b1000002010000030e40","wire_bytes":17},
+    {"semantic_type":"AUTHORITY_CLAIM","normalized_object":{"type":3,"priority":2,"source_ref":2734686209,"authority_class":1,"jurisdiction":356,"credential_ref":15770369,"validity":191},"wire_hex":"0e00a30000010459003c28c06fc0","wire_bytes":14},
+    {"semantic_type":"PRESENCE","normalized_object":{"type":0,"priority":1,"source_ref":2852126721,"machine_class":1,"capability_digest":31,"ttl":121},"wire_hex":"0100aa0000010100001f79","wire_bytes":11},
+    {"semantic_type":"DEGRADED_STATE","normalized_object":{"type":4,"priority":2,"source_ref":2885681153,"affected_capability":2,"health":75,"severity":3,"ttl":147},"wire_hex":"1200ac0000010296e4c0","wire_bytes":10},
+    {"semantic_type":"TRANSPORT_OFFER","normalized_object":{"type":5,"priority":1,"source_ref":2919235585,"transport_id":2,"profile_id":1,"endpoint_token":3490512897,"validity":159},"wire_hex":"1500ae000001201d00d00019f0","wire_bytes":13}
+  ]
+}
