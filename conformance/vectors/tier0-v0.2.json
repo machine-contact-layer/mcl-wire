@@ -1,0 +1,18 @@
+{
+  "status": "research candidate, non-normative",
+  "wire_header": "v0.2 category/opcode candidate",
+  "wire_major": 0,
+  "notes": [
+    "These vectors exercise the six currently measured Tier-0 layouts through the freestanding C99 reference codec.",
+    "The historical tier0-v0.1.json vectors remain unchanged.",
+    "TRANSPORT_OFFER uses the 8-bit transport identifier direction from field-width-review-v0.2.md."
+  ],
+  "vectors": [
+    {"name":"PRESENCE","length":11,"hex":"0002aa0000010100001f79"},
+    {"name":"HAZARD","length":15,"hex":"030ea1000001017f00680100002878"},
+    {"name":"REQUEST","length":17,"hex":"050ca100000102b1000002010000030e40"},
+    {"name":"AUTHORITY_CLAIM","length":14,"hex":"010ca30000010459003c28c06fc0"},
+    {"name":"DEGRADED_STATE","length":10,"hex":"060cac0000010296e4c0"},
+    {"name":"TRANSPORT_OFFER","length":13,"hex":"0802ae0000010201d00d00019f"}
+  ]
+}
