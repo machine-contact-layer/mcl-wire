@@ -26,19 +26,19 @@ static void mcl_zero_bytes(void *ptr, size_t count)
     }
 }
 
-static mcl_status_t mcl_write_u(mcl_bit_writer_t *writer, uint32_t value, unsigned width)
+static mcl_wire_status_t mcl_write_u(mcl_bit_writer_t *writer, uint32_t value, unsigned width)
 {
     unsigned i;
 
     if (writer == NULL || width > 32u) {
-        return MCL_ERR_INVALID_ARGUMENT;
+        return MCL_WIRE_ERR_INVALID_ARGUMENT;
     }
     if ((width < 32u) && (value >= (1u << width))) {
-        return MCL_ERR_RANGE;
+        return MCL_WIRE_ERR_RANGE;
     }
     if (writer->position > writer->capacity_bits ||
         (size_t)width > (writer->capacity_bits - writer->position)) {
-        return MCL_ERR_BUFFER_TOO_SMALL;
+        return MCL_WIRE_ERR_BUFFER_TOO_SMALL;
     }
 
     for (i = 0u; i < width; ++i) {
@@ -54,23 +54,23 @@ static mcl_status_t mcl_write_u(mcl_bit_writer_t *writer, uint32_t value, unsign
         ++writer->position;
     }
 
-    return MCL_OK;
+    return MCL_WIRE_OK;
 }
 
-static mcl_status_t mcl_write_s(mcl_bit_writer_t *writer, int32_t value, unsigned width)
+static mcl_wire_status_t mcl_write_s(mcl_bit_writer_t *writer, int32_t value, unsigned width)
 {
     int32_t minimum;
     int32_t maximum;
     uint32_t encoded;
 
     if (width == 0u || width >= 32u) {
-        return MCL_ERR_RANGE;
+        return MCL_WIRE_ERR_RANGE;
     }
 
     minimum = -(int32_t)(1u << (width - 1u));
     maximum = (int32_t)((1u << (width - 1u)) - 1u);
     if (value < minimum || value > maximum) {
-        return MCL_ERR_RANGE;
+        return MCL_WIRE_ERR_RANGE;
     }
 
     if (value < 0) {
@@ -83,17 +83,17 @@ static mcl_status_t mcl_write_s(mcl_bit_writer_t *writer, int32_t value, unsigne
     return mcl_write_u(writer, encoded, width);
 }
 
-static mcl_status_t mcl_read_u(mcl_bit_reader_t *reader, unsigned width, uint32_t *value)
+static mcl_wire_status_t mcl_read_u(mcl_bit_reader_t *reader, unsigned width, uint32_t *value)
 {
     unsigned i;
     uint32_t result = 0u;
 
     if (reader == NULL || value == NULL || width > 32u) {
-        return MCL_ERR_INVALID_ARGUMENT;
+        return MCL_WIRE_ERR_INVALID_ARGUMENT;
     }
     if (reader->position > reader->size_bits ||
         (size_t)width > (reader->size_bits - reader->position)) {
-        return MCL_ERR_TRUNCATED;
+        return MCL_WIRE_ERR_TRUNCATED;
     }
 
     for (i = 0u; i < width; ++i) {
@@ -105,20 +105,20 @@ static mcl_status_t mcl_read_u(mcl_bit_reader_t *reader, unsigned width, uint32_
     }
 
     *value = result;
-    return MCL_OK;
+    return MCL_WIRE_OK;
 }
 
-static mcl_status_t mcl_read_s(mcl_bit_reader_t *reader, unsigned width, int32_t *value)
+static mcl_wire_status_t mcl_read_s(mcl_bit_reader_t *reader, unsigned width, int32_t *value)
 {
     uint32_t encoded;
-    mcl_status_t status;
+    mcl_wire_status_t status;
 
     if (width == 0u || width >= 32u || value == NULL) {
-        return MCL_ERR_INVALID_ARGUMENT;
+        return MCL_WIRE_ERR_INVALID_ARGUMENT;
     }
 
     status = mcl_read_u(reader, width, &encoded);
-    if (status != MCL_OK) {
+    if (status != MCL_WIRE_OK) {
         return status;
     }
 
@@ -128,55 +128,55 @@ static mcl_status_t mcl_read_s(mcl_bit_reader_t *reader, unsigned width, int32_t
         *value = (int32_t)encoded;
     }
 
-    return MCL_OK;
+    return MCL_WIRE_OK;
 }
 
-static mcl_status_t mcl_require_zero_padding(mcl_bit_reader_t *reader)
+static mcl_wire_status_t mcl_require_zero_padding(mcl_bit_reader_t *reader)
 {
     if (reader == NULL) {
-        return MCL_ERR_INVALID_ARGUMENT;
+        return MCL_WIRE_ERR_INVALID_ARGUMENT;
     }
 
     while (reader->position < reader->size_bits) {
         const size_t byte_index = reader->position >> 3;
         const unsigned bit_index = 7u - (unsigned)(reader->position & 7u);
         if (((reader->buffer[byte_index] >> bit_index) & 1u) != 0u) {
-            return MCL_ERR_NONCANONICAL;
+            return MCL_WIRE_ERR_NONCANONICAL;
         }
         ++reader->position;
     }
 
-    return MCL_OK;
+    return MCL_WIRE_OK;
 }
 
-mcl_status_t mcl_wire_header_encode(
+mcl_wire_status_t mcl_wire_header_encode(
     const mcl_wire_header_t *header,
     uint8_t out[MCL_WIRE_COMMON_HEADER_SIZE])
 {
     if (header == NULL || out == NULL) {
-        return MCL_ERR_INVALID_ARGUMENT;
+        return MCL_WIRE_ERR_INVALID_ARGUMENT;
     }
     if (header->major_version > 15u ||
         header->category > 15u ||
         header->opcode > 31u ||
         header->priority > 3u ||
         header->extension_present > 1u) {
-        return MCL_ERR_RANGE;
+        return MCL_WIRE_ERR_RANGE;
     }
 
     out[0] = (uint8_t)((header->major_version << 4) | header->category);
     out[1] = (uint8_t)((header->opcode << 3) |
                        (header->priority << 1) |
                        header->extension_present);
-    return MCL_OK;
+    return MCL_WIRE_OK;
 }
 
-mcl_status_t mcl_wire_header_decode(
+mcl_wire_status_t mcl_wire_header_decode(
     const uint8_t in[MCL_WIRE_COMMON_HEADER_SIZE],
     mcl_wire_header_t *header)
 {
     if (in == NULL || header == NULL) {
-        return MCL_ERR_INVALID_ARGUMENT;
+        return MCL_WIRE_ERR_INVALID_ARGUMENT;
     }
 
     header->major_version = (uint8_t)(in[0] >> 4);
@@ -184,7 +184,7 @@ mcl_status_t mcl_wire_header_decode(
     header->opcode = (uint8_t)(in[1] >> 3);
     header->priority = (uint8_t)((in[1] >> 1) & 0x03u);
     header->extension_present = (uint8_t)(in[1] & 0x01u);
-    return MCL_OK;
+    return MCL_WIRE_OK;
 }
 
 static void mcl_kind_to_code(
@@ -224,13 +224,13 @@ static void mcl_kind_to_code(
     }
 }
 
-static mcl_status_t mcl_code_to_kind(
+static mcl_wire_status_t mcl_code_to_kind(
     uint8_t category,
     uint8_t opcode,
     mcl_wire_kind_t *kind)
 {
     if (kind == NULL) {
-        return MCL_ERR_INVALID_ARGUMENT;
+        return MCL_WIRE_ERR_INVALID_ARGUMENT;
     }
 
     if (category == 0u && opcode == 0u) {
@@ -246,10 +246,10 @@ static mcl_status_t mcl_code_to_kind(
     } else if (category == 8u && opcode == 0u) {
         *kind = MCL_WIRE_KIND_TRANSPORT_OFFER;
     } else {
-        return MCL_ERR_UNSUPPORTED_SEMANTIC;
+        return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;
     }
 
-    return MCL_OK;
+    return MCL_WIRE_OK;
 }
 
 size_t mcl_wire_tier0_encoded_size(mcl_wire_kind_t kind)
@@ -273,13 +273,13 @@ size_t mcl_wire_tier0_encoded_size(mcl_wire_kind_t kind)
 }
 
 #define MCL_TRY(expression) do { \
-    const mcl_status_t mcl_status__ = (expression); \
-    if (mcl_status__ != MCL_OK) { \
+    const mcl_wire_status_t mcl_status__ = (expression); \
+    if (mcl_status__ != MCL_WIRE_OK) { \
         return mcl_status__; \
     } \
 } while (0)
 
-mcl_status_t mcl_wire_tier0_encode(
+mcl_wire_status_t mcl_wire_tier0_encode(
     const mcl_wire_tier0_t *object,
     uint8_t *out,
     size_t out_capacity,
@@ -293,15 +293,15 @@ mcl_status_t mcl_wire_tier0_encode(
     size_t required;
 
     if (object == NULL || out == NULL || written == NULL) {
-        return MCL_ERR_INVALID_ARGUMENT;
+        return MCL_WIRE_ERR_INVALID_ARGUMENT;
     }
 
     required = mcl_wire_tier0_encoded_size(object->kind);
     if (required == 0u) {
-        return MCL_ERR_UNSUPPORTED_SEMANTIC;
+        return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;
     }
     if (out_capacity < required) {
-        return MCL_ERR_BUFFER_TOO_SMALL;
+        return MCL_WIRE_ERR_BUFFER_TOO_SMALL;
     }
 
     mcl_zero_bytes(out, required);
@@ -366,14 +366,14 @@ mcl_status_t mcl_wire_tier0_encode(
         MCL_TRY(mcl_write_u(&writer, object->body.transport_offer.validity, 8u));
         break;
     default:
-        return MCL_ERR_UNSUPPORTED_SEMANTIC;
+        return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;
     }
 
     *written = required;
-    return MCL_OK;
+    return MCL_WIRE_OK;
 }
 
-mcl_status_t mcl_wire_tier0_decode(
+mcl_wire_status_t mcl_wire_tier0_decode(
     const uint8_t *data,
     size_t data_size,
     mcl_wire_tier0_t *object,
@@ -387,22 +387,22 @@ mcl_status_t mcl_wire_tier0_decode(
     size_t required;
 
     if (data == NULL || object == NULL || consumed == NULL) {
-        return MCL_ERR_INVALID_ARGUMENT;
+        return MCL_WIRE_ERR_INVALID_ARGUMENT;
     }
     if (data_size < MCL_WIRE_COMMON_HEADER_SIZE) {
-        return MCL_ERR_TRUNCATED;
+        return MCL_WIRE_ERR_TRUNCATED;
     }
 
     MCL_TRY(mcl_wire_header_decode(data, &header));
     if (header.major_version != MCL_WIRE_EXPERIMENTAL_MAJOR ||
         header.extension_present != 0u) {
-        return MCL_ERR_UNSUPPORTED_SEMANTIC;
+        return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;
     }
 
     MCL_TRY(mcl_code_to_kind(header.category, header.opcode, &kind));
     required = mcl_wire_tier0_encoded_size(kind);
     if (data_size < required) {
-        return MCL_ERR_TRUNCATED;
+        return MCL_WIRE_ERR_TRUNCATED;
     }
 
     mcl_zero_bytes(object, sizeof(*object));
@@ -484,10 +484,10 @@ mcl_status_t mcl_wire_tier0_decode(
         object->body.transport_offer.validity = (uint8_t)unsigned_value;
         break;
     default:
-        return MCL_ERR_UNSUPPORTED_SEMANTIC;
+        return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;
     }
 
     MCL_TRY(mcl_require_zero_padding(&reader));
     *consumed = required;
-    return MCL_OK;
+    return MCL_WIRE_OK;
 }

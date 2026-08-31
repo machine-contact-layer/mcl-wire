@@ -12,15 +12,15 @@ extern "C" {
 #define MCL_WIRE_COMMON_HEADER_SIZE 2u
 #define MCL_WIRE_TIER0_MAX_SIZE 17u
 
-typedef int32_t mcl_status_t;
+typedef int32_t mcl_wire_status_t;
 enum {
-    MCL_OK = 0,
-    MCL_ERR_INVALID_ARGUMENT = 1,
-    MCL_ERR_BUFFER_TOO_SMALL = 2,
-    MCL_ERR_RANGE = 3,
-    MCL_ERR_TRUNCATED = 4,
-    MCL_ERR_UNSUPPORTED_SEMANTIC = 5,
-    MCL_ERR_NONCANONICAL = 6
+    MCL_WIRE_OK = 0,
+    MCL_WIRE_ERR_INVALID_ARGUMENT = 1,
+    MCL_WIRE_ERR_BUFFER_TOO_SMALL = 2,
+    MCL_WIRE_ERR_RANGE = 3,
+    MCL_WIRE_ERR_TRUNCATED = 4,
+    MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC = 5,
+    MCL_WIRE_ERR_NONCANONICAL = 6
 };
 
 typedef uint8_t mcl_wire_kind_t;
@@ -102,18 +102,18 @@ typedef struct {
     } body;
 } mcl_wire_tier0_t;
 
-mcl_status_t mcl_wire_header_encode(const mcl_wire_header_t *header, uint8_t out[MCL_WIRE_COMMON_HEADER_SIZE]);
-mcl_status_t mcl_wire_header_decode(const uint8_t in[MCL_WIRE_COMMON_HEADER_SIZE], mcl_wire_header_t *header);
+mcl_wire_status_t mcl_wire_header_encode(const mcl_wire_header_t *header, uint8_t out[MCL_WIRE_COMMON_HEADER_SIZE]);
+mcl_wire_status_t mcl_wire_header_decode(const uint8_t in[MCL_WIRE_COMMON_HEADER_SIZE], mcl_wire_header_t *header);
 
 size_t mcl_wire_tier0_encoded_size(mcl_wire_kind_t kind);
 
-mcl_status_t mcl_wire_tier0_encode(
+mcl_wire_status_t mcl_wire_tier0_encode(
     const mcl_wire_tier0_t *object,
     uint8_t *out,
     size_t out_capacity,
     size_t *written);
 
-mcl_status_t mcl_wire_tier0_decode(
+mcl_wire_status_t mcl_wire_tier0_decode(
     const uint8_t *data,
     size_t data_size,
     mcl_wire_tier0_t *object,

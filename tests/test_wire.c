@@ -1,8 +1,26 @@
 #include "mcl/wire.h"
 
-#include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+#define CHECK_STATUS(call, expected) do { \
+    const mcl_wire_status_t mcl_st__ = (call); \
+    if (mcl_st__ != (expected)) { \
+        fprintf(stderr, "FAIL at %s:%d: %s returned %d, expected %d\n", \
+                __FILE__, __LINE__, #call, (int)mcl_st__, (int)(expected)); \
+        exit(1); \
+    } \
+} while (0)
+
+#define CHECK_TRUE(expr) do { \
+    if (!(expr)) { \
+        fprintf(stderr, "FAIL at %s:%d: (%s) is false\n", \
+                __FILE__, __LINE__, #expr); \
+        exit(1); \
+    } \
+} while (0)
 
 static uint32_t mcl_test_rng_state = 0x12345678u;
 
@@ -50,9 +68,9 @@ static void mcl_test_headers(void)
                         input.priority = (uint8_t)priority;
                         input.extension_present = (uint8_t)extension;
 
-                        assert(mcl_wire_header_encode(&input, encoded) == MCL_OK);
-                        assert(mcl_wire_header_decode(encoded, &output) == MCL_OK);
-                        assert(memcmp(&input, &output, sizeof(input)) == 0);
+                        CHECK_STATUS(mcl_wire_header_encode(&input, encoded), MCL_WIRE_OK);
+                        CHECK_STATUS(mcl_wire_header_decode(encoded, &output), MCL_WIRE_OK);
+                        CHECK_TRUE(memcmp(&input, &output, sizeof(input)) == 0);
                         ++count;
                     }
                 }
@@ -60,7 +78,7 @@ static void mcl_test_headers(void)
         }
     }
 
-    assert(count == 65536ul);
+    CHECK_TRUE(count == 65536ul);
 }
 
 static void mcl_test_fill(mcl_wire_tier0_t *object, mcl_wire_kind_t kind)
@@ -113,7 +131,7 @@ static void mcl_test_fill(mcl_wire_tier0_t *object, mcl_wire_kind_t kind)
         object->body.transport_offer.validity = (uint8_t)mcl_test_random();
         break;
     default:
-        assert(0);
+        exit(1);
     }
 }
 
@@ -134,7 +152,7 @@ static void mcl_test_tier0_roundtrips(void)
 
     for (kind_index = 0u; kind_index < 6u; ++kind_index) {
         const mcl_wire_kind_t kind = (mcl_wire_kind_t)kind_index;
-        assert(mcl_wire_tier0_encoded_size(kind) == expected_sizes[kind_index]);
+        CHECK_TRUE(mcl_wire_tier0_encoded_size(kind) == expected_sizes[kind_index]);
 
         for (trial = 0u; trial < 20000u; ++trial) {
             mcl_wire_tier0_t input;
@@ -143,24 +161,24 @@ static void mcl_test_tier0_roundtrips(void)
             size_t consumed = 0u;
 
             mcl_test_fill(&input, kind);
-            assert(mcl_wire_tier0_encode(
-                       &input, encoded, sizeof(encoded), &written) == MCL_OK);
-            assert(written == expected_sizes[kind_index]);
-            assert(mcl_wire_tier0_decode(
-                       encoded, written, &output, &consumed) == MCL_OK);
-            assert(consumed == written);
-            assert(memcmp(&input, &output, sizeof(input)) == 0);
+            CHECK_STATUS(mcl_wire_tier0_encode(
+                       &input, encoded, sizeof(encoded), &written), MCL_WIRE_OK);
+            CHECK_TRUE(written == expected_sizes[kind_index]);
+            CHECK_STATUS(mcl_wire_tier0_decode(
+                       encoded, written, &output, &consumed), MCL_WIRE_OK);
+            CHECK_TRUE(consumed == written);
+            CHECK_TRUE(memcmp(&input, &output, sizeof(input)) == 0);
 
-            assert(mcl_wire_tier0_decode(
-                       encoded, written - 1u, &output, &consumed) == MCL_ERR_TRUNCATED);
-            assert(mcl_wire_tier0_encode(
-                       &input, encoded, written - 1u, &consumed) == MCL_ERR_BUFFER_TOO_SMALL);
+            CHECK_STATUS(mcl_wire_tier0_decode(
+                       encoded, written - 1u, &output, &consumed), MCL_WIRE_ERR_TRUNCATED);
+            CHECK_STATUS(mcl_wire_tier0_encode(
+                       &input, encoded, written - 1u, &consumed), MCL_WIRE_ERR_BUFFER_TOO_SMALL);
 
             if (mcl_kind_has_padding(kind) != 0) {
                 const uint8_t saved = encoded[written - 1u];
                 encoded[written - 1u] = (uint8_t)(saved | 0x01u);
-                assert(mcl_wire_tier0_decode(
-                           encoded, written, &output, &consumed) == MCL_ERR_NONCANONICAL);
+                CHECK_STATUS(mcl_wire_tier0_decode(
+                           encoded, written, &output, &consumed), MCL_WIRE_ERR_NONCANONICAL);
                 encoded[written - 1u] = saved;
             }
         }

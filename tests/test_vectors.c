@@ -1,9 +1,26 @@
 #include "mcl/wire.h"
 
-#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+#define CHECK_STATUS(call, expected) do { \
+    const mcl_wire_status_t mcl_st__ = (call); \
+    if (mcl_st__ != (expected)) { \
+        fprintf(stderr, "FAIL at %s:%d: %s returned %d, expected %d\n", \
+                __FILE__, __LINE__, #call, (int)mcl_st__, (int)(expected)); \
+        exit(1); \
+    } \
+} while (0)
+
+#define CHECK_TRUE(expr) do { \
+    if (!(expr)) { \
+        fprintf(stderr, "FAIL at %s:%d: (%s) is false\n", \
+                __FILE__, __LINE__, #expr); \
+        exit(1); \
+    } \
+} while (0)
 
 typedef struct {
     const char *name;
@@ -31,16 +48,16 @@ static const vector_t vectors[] = {
 int main(void)
 {
     size_t i;
-    for (i=0u; i<sizeof(vectors)/sizeof(vectors[0]); ++i) {
+    for (i = 0u; i < sizeof(vectors)/sizeof(vectors[0]); ++i) {
         uint8_t encoded[MCL_WIRE_TIER0_MAX_SIZE];
         mcl_wire_tier0_t decoded;
-        size_t written=0u, consumed=0u;
-        assert(mcl_wire_tier0_encode(&vectors[i].object, encoded, sizeof(encoded), &written)==MCL_OK);
-        assert(written==vectors[i].size);
-        assert(memcmp(encoded,vectors[i].bytes,written)==0);
-        assert(mcl_wire_tier0_decode(vectors[i].bytes,vectors[i].size,&decoded,&consumed)==MCL_OK);
-        assert(consumed==vectors[i].size);
-        assert(memcmp(&decoded,&vectors[i].object,sizeof(decoded))==0);
+        size_t written = 0u, consumed = 0u;
+        CHECK_STATUS(mcl_wire_tier0_encode(&vectors[i].object, encoded, sizeof(encoded), &written), MCL_WIRE_OK);
+        CHECK_TRUE(written == vectors[i].size);
+        CHECK_TRUE(memcmp(encoded, vectors[i].bytes, written) == 0);
+        CHECK_STATUS(mcl_wire_tier0_decode(vectors[i].bytes, vectors[i].size, &decoded, &consumed), MCL_WIRE_OK);
+        CHECK_TRUE(consumed == vectors[i].size);
+        CHECK_TRUE(memcmp(&decoded, &vectors[i].object, sizeof(decoded)) == 0);
         printf("%s %zu PASS\n", vectors[i].name, vectors[i].size);
     }
     return 0;

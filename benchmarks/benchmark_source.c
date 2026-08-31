@@ -311,9 +311,9 @@ int main(int argc, char **argv)
         if (p==NULL) return 5;
         populate_object(&event,&object);
         fixed_size=mcl_wire_tier0_encoded_size(object.kind);
-        assert(mcl_wire_tier0_encode(&object,encoded,sizeof(encoded),&written)==MCL_OK);
+        assert(mcl_wire_tier0_encode(&object,encoded,sizeof(encoded),&written)==MCL_WIRE_OK);
         assert(written==fixed_size);
-        assert(mcl_wire_tier0_decode(encoded,written,&decoded,&consumed)==MCL_OK);
+        assert(mcl_wire_tier0_decode(encoded,written,&decoded,&consumed)==MCL_WIRE_OK);
         assert(consumed==written);
         assert(memcmp(&object,&decoded,sizeof(object))==0);
         json_total+=json_size(&event);

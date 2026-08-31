@@ -22,19 +22,19 @@ typedef struct {
     uint8_t has_previous;
 } mcl_wire_extension_reader_t;
 
-mcl_status_t mcl_wire_uvarint_encode(
+mcl_wire_status_t mcl_wire_uvarint_encode(
     uint32_t value,
     uint8_t *out,
     size_t out_capacity,
     size_t *written);
 
-mcl_status_t mcl_wire_uvarint_decode(
+mcl_wire_status_t mcl_wire_uvarint_decode(
     const uint8_t *data,
     size_t data_size,
     uint32_t *value,
     size_t *consumed);
 
-mcl_status_t mcl_wire_extensions_encode(
+mcl_wire_status_t mcl_wire_extensions_encode(
     const mcl_wire_extension_t *extensions,
     size_t extension_count,
     uint8_t *out,
@@ -46,7 +46,7 @@ void mcl_wire_extension_reader_init(
     const uint8_t *data,
     size_t data_size);
 
-mcl_status_t mcl_wire_extension_reader_next(
+mcl_wire_status_t mcl_wire_extension_reader_next(
     mcl_wire_extension_reader_t *reader,
     mcl_wire_extension_t *extension,
     uint8_t *has_extension);

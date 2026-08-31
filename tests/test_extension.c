@@ -1,9 +1,26 @@
 #include "mcl/extension.h"
 
-#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+#define CHECK_STATUS(call, expected) do { \
+    const mcl_wire_status_t mcl_st__ = (call); \
+    if (mcl_st__ != (expected)) { \
+        fprintf(stderr, "FAIL at %s:%d: %s returned %d, expected %d\n", \
+                __FILE__, __LINE__, #call, (int)mcl_st__, (int)(expected)); \
+        exit(1); \
+    } \
+} while (0)
+
+#define CHECK_TRUE(expr) do { \
+    if (!(expr)) { \
+        fprintf(stderr, "FAIL at %s:%d: (%s) is false\n", \
+                __FILE__, __LINE__, #expr); \
+        exit(1); \
+    } \
+} while (0)
 
 static uint32_t state = 0x31415926u;
 
@@ -26,17 +43,17 @@ static void test_uvarint(void)
         uint32_t decoded = 0u;
         size_t written = 0u;
         size_t consumed = 0u;
-        assert(mcl_wire_uvarint_encode(value, encoded, sizeof(encoded), &written) == MCL_OK);
-        assert(mcl_wire_uvarint_decode(encoded, written, &decoded, &consumed) == MCL_OK);
-        assert(decoded == value);
-        assert(consumed == written);
+        CHECK_STATUS(mcl_wire_uvarint_encode(value, encoded, sizeof(encoded), &written), MCL_WIRE_OK);
+        CHECK_STATUS(mcl_wire_uvarint_decode(encoded, written, &decoded, &consumed), MCL_WIRE_OK);
+        CHECK_TRUE(decoded == value);
+        CHECK_TRUE(consumed == written);
     }
 
     {
         const uint8_t noncanonical[2] = {0x80u, 0x00u};
         uint32_t value;
         size_t consumed;
-        assert(mcl_wire_uvarint_decode(noncanonical, sizeof(noncanonical), &value, &consumed) == MCL_ERR_NONCANONICAL);
+        CHECK_STATUS(mcl_wire_uvarint_decode(noncanonical, sizeof(noncanonical), &value, &consumed), MCL_WIRE_ERR_NONCANONICAL);
     }
 }
 
@@ -66,25 +83,25 @@ static void test_extension_blocks(void)
             }
         }
 
-        assert(mcl_wire_extensions_encode(input, count, encoded, sizeof(encoded), &written) == MCL_OK);
+        CHECK_STATUS(mcl_wire_extensions_encode(input, count, encoded, sizeof(encoded), &written), MCL_WIRE_OK);
         mcl_wire_extension_reader_init(&reader, encoded, written);
 
         for (i = 0u; i < count; ++i) {
             mcl_wire_extension_t output;
             uint8_t has_extension = 0u;
-            assert(mcl_wire_extension_reader_next(&reader, &output, &has_extension) == MCL_OK);
-            assert(has_extension == 1u);
-            assert(output.id == input[i].id);
-            assert(output.critical == input[i].critical);
-            assert(output.value_size == input[i].value_size);
-            assert(memcmp(output.value, input[i].value, output.value_size) == 0);
+            CHECK_STATUS(mcl_wire_extension_reader_next(&reader, &output, &has_extension), MCL_WIRE_OK);
+            CHECK_TRUE(has_extension == 1u);
+            CHECK_TRUE(output.id == input[i].id);
+            CHECK_TRUE(output.critical == input[i].critical);
+            CHECK_TRUE(output.value_size == input[i].value_size);
+            CHECK_TRUE(memcmp(output.value, input[i].value, output.value_size) == 0);
         }
 
         {
             mcl_wire_extension_t output;
             uint8_t has_extension = 1u;
-            assert(mcl_wire_extension_reader_next(&reader, &output, &has_extension) == MCL_OK);
-            assert(has_extension == 0u);
+            CHECK_STATUS(mcl_wire_extension_reader_next(&reader, &output, &has_extension), MCL_WIRE_OK);
+            CHECK_TRUE(has_extension == 0u);
         }
     }
 }
@@ -99,7 +116,7 @@ static void test_negative_cases(void)
         {3u, 0u, a, sizeof(a)},
         {3u, 0u, b, sizeof(b)}
     };
-    assert(mcl_wire_extensions_encode(duplicate, 2u, encoded, sizeof(encoded), &written) == MCL_ERR_NONCANONICAL);
+    CHECK_STATUS(mcl_wire_extensions_encode(duplicate, 2u, encoded, sizeof(encoded), &written), MCL_WIRE_ERR_NONCANONICAL);
 
     {
         const uint8_t truncated[] = {0x02u, 0x05u, 0x01u};
@@ -107,7 +124,7 @@ static void test_negative_cases(void)
         mcl_wire_extension_t extension;
         uint8_t has_extension;
         mcl_wire_extension_reader_init(&reader, truncated, sizeof(truncated));
-        assert(mcl_wire_extension_reader_next(&reader, &extension, &has_extension) == MCL_ERR_TRUNCATED);
+        CHECK_STATUS(mcl_wire_extension_reader_next(&reader, &extension, &has_extension), MCL_WIRE_ERR_TRUNCATED);
     }
 
     {
@@ -116,10 +133,10 @@ static void test_negative_cases(void)
         mcl_wire_extension_reader_t reader;
         mcl_wire_extension_t decoded;
         uint8_t has_extension;
-        assert(mcl_wire_extensions_encode(&optional, 1u, encoded, sizeof(encoded), &written) == MCL_OK);
+        CHECK_STATUS(mcl_wire_extensions_encode(&optional, 1u, encoded, sizeof(encoded), &written), MCL_WIRE_OK);
         mcl_wire_extension_reader_init(&reader, encoded, written);
-        assert(mcl_wire_extension_reader_next(&reader, &decoded, &has_extension) == MCL_OK);
-        assert(has_extension == 1u && decoded.id == 7u && decoded.critical == 0u);
+        CHECK_STATUS(mcl_wire_extension_reader_next(&reader, &decoded, &has_extension), MCL_WIRE_OK);
+        CHECK_TRUE(has_extension == 1u && decoded.id == 7u && decoded.critical == 0u);
     }
 
     {
@@ -128,10 +145,10 @@ static void test_negative_cases(void)
         mcl_wire_extension_reader_t reader;
         mcl_wire_extension_t decoded;
         uint8_t has_extension;
-        assert(mcl_wire_extensions_encode(&critical, 1u, encoded, sizeof(encoded), &written) == MCL_OK);
+        CHECK_STATUS(mcl_wire_extensions_encode(&critical, 1u, encoded, sizeof(encoded), &written), MCL_WIRE_OK);
         mcl_wire_extension_reader_init(&reader, encoded, written);
-        assert(mcl_wire_extension_reader_next(&reader, &decoded, &has_extension) == MCL_OK);
-        assert(has_extension == 1u && decoded.id == 7u && decoded.critical == 1u);
+        CHECK_STATUS(mcl_wire_extension_reader_next(&reader, &decoded, &has_extension), MCL_WIRE_OK);
+        CHECK_TRUE(has_extension == 1u && decoded.id == 7u && decoded.critical == 1u);
     }
 }
 
