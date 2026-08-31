@@ -1,0 +1,29 @@
+{
+  "corpus_tier0_events": 41,
+  "excluded_non_tier0_events": 1,
+  "mean_bytes": {
+    "json_bytes": 122.14634146341463,
+    "cbor_string_keys_bytes": 87.65853658536585,
+    "cbor_integer_keys_bytes": 26.463414634146343,
+    "protobuf_typed_bytes": 22.48780487804878,
+    "fixed_v0_bytes": 14.682926829268293,
+    "fixed_context_bytes": 11.682926829268293
+  },
+  "per_type_mean_bytes": {
+    "AUTHORITY_CLAIM": {"json_bytes": 126.66666666666667,"cbor_string_keys_bytes": 96.66666666666667,"cbor_integer_keys_bytes": 25.666666666666668,"protobuf_typed_bytes": 26.833333333333332,"fixed_v0_bytes": 14,"fixed_context_bytes": 11},
+    "DEGRADED_STATE": {"json_bytes": 106,"cbor_string_keys_bytes": 79,"cbor_integer_keys_bytes": 21,"protobuf_typed_bytes": 21,"fixed_v0_bytes": 10,"fixed_context_bytes": 7},
+    "HAZARD": {"json_bytes": 134.9090909090909,"cbor_string_keys_bytes": 94.27272727272727,"cbor_integer_keys_bytes": 30.272727272727273,"protobuf_typed_bytes": 23.454545454545453,"fixed_v0_bytes": 15,"fixed_context_bytes": 12},
+    "PRESENCE": {"json_bytes": 98,"cbor_string_keys_bytes": 73.66666666666667,"cbor_integer_keys_bytes": 18.666666666666668,"protobuf_typed_bytes": 14,"fixed_v0_bytes": 11,"fixed_context_bytes": 8},
+    "REQUEST": {"json_bytes": 119.5,"cbor_string_keys_bytes": 83.07142857142857,"cbor_integer_keys_bytes": 27.071428571428573,"protobuf_typed_bytes": 21.214285714285715,"fixed_v0_bytes": 17,"fixed_context_bytes": 14},
+    "TRANSPORT_OFFER": {"json_bytes": 119.75,"cbor_string_keys_bytes": 89,"cbor_integer_keys_bytes": 25,"protobuf_typed_bytes": 25.25,"fixed_v0_bytes": 13,"fixed_context_bytes": 10}
+  },
+  "fixed_v0_reduction_percent_vs": {"json_bytes": 87.97923322683707,"cbor_string_keys_bytes": 83.24986087924317,"cbor_integer_keys_bytes": 44.516129032258064,"protobuf_typed_bytes": 34.70715835140997},
+  "fixed_context_reduction_percent_vs": {"json_bytes": 90.435303514377,"cbor_string_keys_bytes": 86.67223149693935,"cbor_integer_keys_bytes": 55.85253456221197,"protobuf_typed_bytes": 48.04772234273319},
+  "source_corpus_sha256": "ac1f8ba0474d2def22b736a737305681144d6fae86ce327ce978ec1b24c783d5",
+  "notes": [
+    "Non-normative corpus-specific result.",
+    "Generic STATUS is Tier 1 in the current registry and is excluded from the Tier-0 benchmark; DEGRADED_STATE remains Tier-0 candidate.",
+    "Protobuf column uses google.protobuf proto3 deterministic serialization; zero default scalars are omitted.",
+    "Fixed-context assumes synchronized context and replaces 32-bit source_ref with an 8-bit context_id."
+  ]
+}
