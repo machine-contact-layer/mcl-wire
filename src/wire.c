@@ -19,7 +19,7 @@ typedef struct {
 
 static void mcl_zero_bytes(void *ptr, size_t count)
 {
-    uint8_t *bytes = (uint8_t *)ptr;
+    volatile uint8_t *bytes = (volatile uint8_t *)ptr;
     size_t i;
     for (i = 0u; i < count; ++i) {
         bytes[i] = 0u;
