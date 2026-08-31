@@ -1,0 +1,9 @@
+{
+  "ephemeral_source_ref": {"bits": 32,"rationale": "Local ephemeral reference. Birthday collision probability calculated separately; not proof of identity."},
+  "relative_x_y": {"bits_each": 12,"resolution_m": 0.25,"range_m": [-512.0,511.75]},
+  "relative_z": {"bits": 10,"resolution_m": 0.25,"range_m": [-128.0,127.75]},
+  "radius": {"bits": 10,"resolution_m": 0.25,"range_m": [0.0,255.75]},
+  "confidence": {"bits": 7,"levels": 128,"max_quantization_error": 0.003937007874015748},
+  "severity": {"bits": 3,"levels": 8},
+  "ttl": {"bits": 8,"encoding": "eee mmmmm, decoded_ms = mantissa * 10 ms * 2^exponent","max_ms": 39680,"median_relative_error_10ms_grid_10_to_max": 0.010449919766989023,"p95_relative_error_10ms_grid_10_to_max": 0.022900763358778626,"worst_relative_error_10ms_grid_10_to_max": 0.030303030303030304}
+}
