@@ -34,4 +34,10 @@ if(MCL_WIRE_BUILD_BENCHMARKS)
         C_STANDARD 99
         C_STANDARD_REQUIRED YES
         C_EXTENSIONS NO)
+    if(MCL_WIRE_BUILD_TESTS)
+        add_test(
+            NAME mcl_wire_benchmark_source
+            COMMAND mcl_wire_benchmark_source
+                    "${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/cases-v0.1.json")
+    endif()
 endif()

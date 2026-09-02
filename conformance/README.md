@@ -57,4 +57,4 @@ semantic object
 → recovered semantic object
 ```
 
-No final hex vectors are committed yet because field IDs, quantization, and Tier-0 layouts remain under active benchmark design.
+Candidate hex vectors are committed under `vectors/`. They are reproducible research artifacts, not normative release vectors, while field IDs, quantization, and Tier-0 layouts remain under active benchmark design.

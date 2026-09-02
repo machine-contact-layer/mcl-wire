@@ -1,6 +1,5 @@
 #include "mcl/wire.h"
 
-#include <assert.h>
 #include <ctype.h>
 #include <inttypes.h>
 #include <stdint.h>
@@ -40,6 +39,16 @@ static const field_info_t field_info[] = {
     {"transport_id",23u,0u},{"profile_id",24u,0u},{"endpoint_token",25u,0u}
 };
 
+static void bench_require(int condition, const char *expression)
+{
+    if (condition == 0) {
+        fprintf(stderr, "benchmark validation failed: %s\n", expression);
+        exit(EXIT_FAILURE);
+    }
+}
+
+#define BENCH_REQUIRE(condition) bench_require((condition), #condition)
+
 static const field_info_t *lookup_field(const char *name)
 {
     size_t i;
@@ -61,7 +70,7 @@ static const bench_field_t *get_field(const bench_event_t *event, const char *na
 static int64_t require_value(const bench_event_t *event, const char *name)
 {
     const bench_field_t *field=get_field(event,name);
-    assert(field!=NULL);
+    BENCH_REQUIRE(field!=NULL);
     return field->value;
 }
 
@@ -200,7 +209,7 @@ static size_t cbor_size(const bench_event_t *event, int integer_keys)
     size_t i;
     for (i=0u;i<event->count;++i) {
         const field_info_t *info=lookup_field(event->fields[i].key);
-        assert(info!=NULL);
+        BENCH_REQUIRE(info!=NULL);
         size+=integer_keys!=0 ? cbor_head_size(info->protobuf_number) : cbor_text_size(info->name);
         size+=cbor_int_size(event->fields[i].value);
     }
@@ -214,7 +223,7 @@ static size_t protobuf_size(const bench_event_t *event)
     for (i=0u;i<event->count;++i) {
         const field_info_t *info=lookup_field(event->fields[i].key);
         uint64_t value;
-        assert(info!=NULL);
+        BENCH_REQUIRE(info!=NULL);
         if (event->fields[i].value==0) continue;
         size+=varint_size((uint64_t)((uint32_t)info->protobuf_number<<3));
         value=info->protobuf_signed!=0u ? zigzag32(event->fields[i].value) : (uint64_t)event->fields[i].value;
@@ -273,7 +282,7 @@ static void populate_object(const bench_event_t *event, mcl_wire_tier0_t *object
         object->body.transport_offer.validity=(uint8_t)require_value(event,"validity");
         break;
     default:
-        assert(0);
+        BENCH_REQUIRE(0);
     }
 }
 
@@ -311,11 +320,11 @@ int main(int argc, char **argv)
         if (p==NULL) return 5;
         populate_object(&event,&object);
         fixed_size=mcl_wire_tier0_encoded_size(object.kind);
-        assert(mcl_wire_tier0_encode(&object,encoded,sizeof(encoded),&written)==MCL_WIRE_OK);
-        assert(written==fixed_size);
-        assert(mcl_wire_tier0_decode(encoded,written,&decoded,&consumed)==MCL_WIRE_OK);
-        assert(consumed==written);
-        assert(memcmp(&object,&decoded,sizeof(object))==0);
+        BENCH_REQUIRE(mcl_wire_tier0_encode(&object,encoded,sizeof(encoded),&written)==MCL_WIRE_OK);
+        BENCH_REQUIRE(written==fixed_size);
+        BENCH_REQUIRE(mcl_wire_tier0_decode(encoded,written,&decoded,&consumed)==MCL_WIRE_OK);
+        BENCH_REQUIRE(consumed==written);
+        BENCH_REQUIRE(memcmp(&object,&decoded,sizeof(object))==0);
         json_total+=json_size(&event);
         cbor_string_total+=cbor_size(&event,0);
         cbor_integer_total+=cbor_size(&event,1);
@@ -327,13 +336,13 @@ int main(int argc, char **argv)
         if (p<end && *p==',') ++p;
     }
 
-    assert(case_count==41u);
-    assert(json_total==UINT64_C(5008));
-    assert(cbor_string_total==UINT64_C(3594));
-    assert(cbor_integer_total==UINT64_C(1085));
-    assert(protobuf_total==UINT64_C(922));
-    assert(fixed_total==UINT64_C(602));
-    assert(context_total==UINT64_C(479));
+    BENCH_REQUIRE(case_count==41u);
+    BENCH_REQUIRE(json_total==UINT64_C(5008));
+    BENCH_REQUIRE(cbor_string_total==UINT64_C(3594));
+    BENCH_REQUIRE(cbor_integer_total==UINT64_C(1085));
+    BENCH_REQUIRE(protobuf_total==UINT64_C(922));
+    BENCH_REQUIRE(fixed_total==UINT64_C(602));
+    BENCH_REQUIRE(context_total==UINT64_C(479));
 
     printf("cases: %zu\n",case_count);
     printf("compact JSON mean: %.3f B\n",(double)json_total/(double)case_count);

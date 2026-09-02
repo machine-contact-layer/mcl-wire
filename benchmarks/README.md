@@ -29,4 +29,4 @@ The historical context result replaces a 32-bit source reference with an 8-bit s
 
 Link headers, integrity/authentication fields, FEC, and physical framing remain outside this source-size comparison.
 
-Source corpus SHA-256: `ac1f8ba0474d2def22b736a737305681144d6fae86ce327ce978ec1b24c783d5`
+Source corpus SHA-256: `305b16c96d951404066f686533be00e9f4dc199daeec0e618a04f2385aebe4ec`

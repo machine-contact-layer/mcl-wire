@@ -1,7 +1,7 @@
 {
   "status": "research vectors; candidate layout, not normative",
   "layout": "spec/tier0-candidate-layout-v0.1.md",
-  "source_corpus_sha256": "ac1f8ba0474d2def22b736a737305681144d6fae86ce327ce978ec1b24c783d5",
+  "source_corpus_sha256": "305b16c96d951404066f686533be00e9f4dc199daeec0e618a04f2385aebe4ec",
   "vectors": [
     {"semantic_type":"HAZARD","normalized_object":{"type":1,"priority":3,"source_ref":2701131777,"hazard_class":1,"severity":3,"confidence":124,"x":26,"y":4,"z":0,"radius":10,"ttl":30},"wire_hex":"0700a1000001017f00680100002878","wire_bytes":15},
     {"semantic_type":"REQUEST","normalized_object":{"type":2,"priority":2,"source_ref":2701131777,"request_class":2,"target_ref":2969567234,"x":16,"y":0,"radius":12,"ttl":57},"wire_hex":"0a00a100000102b1000002010000030e40","wire_bytes":17},
