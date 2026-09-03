@@ -49,13 +49,34 @@ WireObject {
     priority
     context_id?
     sender_ref?
-    session_ref?
     payload
-    integrity_tag?
 }
 ```
 
-Exact bit assignments remain experimental until the scenario corpus and benchmark suite are frozen.
+Exact bit assignments remain experimental until the scenario corpus and benchmark suite are frozen. The implemented header is specified in
+[`common-header-v0.2.md`](common-header-v0.2.md).
+
+**Two fields were removed from this sketch rather than implemented, and the
+reasons are load-bearing.**
+
+`integrity_tag` is gone. The only integrity-shaped mechanism MCL has is the
+Link frame's CRC-32, which detects accidental corruption and stops no attacker,
+since one simply recomputes it over the altered bytes. It lives at the Link
+layer where framing errors occur, it is named `frame_check` precisely so it
+cannot be mistaken for cryptographic integrity, and Wire has no equivalent. A
+field named `integrity_tag` in a Wire envelope would promise a property no part
+of MCL provides. See Architecture Charter §2.11 and `mcl-core/SECURITY.md`.
+
+`session_ref` is gone from the Wire envelope because it belongs to the Link
+frame, not to a semantic object. A session reference correlates a contact
+continuing across a transport change; it has nothing to do with what an object
+*means*, and duplicating it here would create a second copy that could disagree
+with the frame carrying it. Charter §2.1: a semantic object means the same thing
+on every transport, which it cannot do if it carries transport-session state.
+
+Note also that a `context_id` is not a `session_ref`. They have different
+lifetimes and either can exist without the other; conflating them is a defect
+this project has already shipped once.
 
 ## 4. Context
 

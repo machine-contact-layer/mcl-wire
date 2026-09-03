@@ -1,8 +1,12 @@
 # Tier-0 Candidate Layout v0.1
 
-Status: **Research Candidate, non-normative**
+Status: **Research Candidate, non-normative. Superseded — retained as a record.**
 
-This document records the first bit-budget candidate produced from the v0.1 scenario corpus. It exists to be falsified by benchmarks and additional scenarios.
+This document records the first bit-budget candidate produced from the v0.1 scenario corpus. It exists to be falsified by benchmarks and additional scenarios, and it was.
+
+**Do not implement from this document.** The header model below (2-bit version, 4-bit semantic type) was replaced by the 16-bit major/category/opcode/priority/extension model in [`common-header-v0.2.md`](common-header-v0.2.md), which is what the reference codec implements. A 4-bit semantic type allowed 16 meanings for the lifetime of the wire version; the current model separates category from opcode so the namespace does not have to be rationed.
+
+It is kept unedited because a superseded candidate is evidence of how a decision was reached, and rewriting it would destroy that. Current conformance vectors are in [`../conformance/vectors/`](../conformance/vectors/); the newest is `tier0-v0.3.json`.
 
 ## 1. Common header
 
