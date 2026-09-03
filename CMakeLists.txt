@@ -1,13 +1,18 @@
 cmake_minimum_required(VERSION 3.16)
 project(mcl_wire LANGUAGES C)
 
+# SameMajorVersion compatibility keys off this; see V1_SCOPE 4.5 -- source/API
+# compatibility, not binary ABI.
+set(MCL_WIRE_VERSION 1.0.0)
+
 option(MCL_WIRE_BUILD_TESTS "Build host-side reference tests" ON)
 option(MCL_WIRE_BUILD_BENCHMARKS "Build retained source-size benchmark" ON)
 
 add_library(mcl_wire STATIC
     src/wire.c
     src/extension.c)
-target_include_directories(mcl_wire PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+# Include dirs are set with generator expressions in the install section
+# below, because a plain source path cannot be exported.
 set_target_properties(mcl_wire PROPERTIES
     C_STANDARD 99
     C_STANDARD_REQUIRED YES
@@ -85,3 +90,38 @@ if(MCL_WIRE_BUILD_BENCHMARKS)
                     "${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/cases-v0.1.json")
     endif()
 endif()
+
+# --- Installation and package export ---
+#
+# An external consumer must be able to build against MCL without knowing that
+# these repositories are siblings in one directory. Everything below exists so
+# that find_package(mcl_wire) works from an install prefix and nothing resolves
+# through a relative ../ path.
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+target_include_directories(mcl_wire PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+
+install(TARGETS mcl_wire
+    EXPORT mcl_wireTargets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(DIRECTORY include/mcl DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(EXPORT mcl_wireTargets
+    FILE mcl_wireTargets.cmake
+    NAMESPACE mcl::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/mcl_wire)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/mcl_wireConfigVersion.cmake"
+    VERSION ${MCL_WIRE_VERSION}
+    COMPATIBILITY SameMajorVersion)
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/mcl_wireConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/mcl_wireConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/mcl_wire)
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/mcl_wireConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/mcl_wireConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/mcl_wire)
