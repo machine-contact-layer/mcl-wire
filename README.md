@@ -33,7 +33,7 @@ The C reference implementation:
 
 ## Current executable research subset
 
-The first C reference slice implements the six Tier-0 layouts already supported by the measured source benchmark:
+The C reference implements seven Tier-0 layouts:
 
 - PRESENCE
 - HAZARD
@@ -41,6 +41,24 @@ The first C reference slice implements the six Tier-0 layouts already supported 
 - AUTHORITY_CLAIM
 - DEGRADED_STATE
 - TRANSPORT_OFFER
+- TRANSPORT_ACCEPT
+
+`TRANSPORT_ACCEPT` is the other half of a transport change. Without it the
+offering peer never learns which transport was selected, so two independent
+implementations could agree on an offer and then complete nothing — which is
+exactly the test for whether something belongs in the specification.
+
+The layouts are specified bit for bit in
+[`spec/tier0-layout-v0.2.md`](spec/tier0-layout-v0.2.md), independently of this
+code, and `tools/validate_tier0_layout.c` checks that specification against the
+codec on every test run.
+
+**Layout interoperability is substantially solved; meaning interoperability is
+not.** Sixteen of the 21 primitive field meanings are still unsettled, recorded
+field by field in
+[`tier0-fields-v0.1.json`](../mcl-core/registries/tier0-fields-v0.1.json). Three
+of the seven objects are proposed Stable for v1 on that basis; see
+[`V1_SCOPE.md`](../mcl-core/governance/V1_SCOPE.md).
 
 It uses the current v0.2 16-bit common-header candidate:
 
@@ -89,11 +107,16 @@ The host test suite currently covers:
 
 - all 65,536 possible common headers;
 - 120,000 seeded randomized Tier-0 round trips;
-- exact v0.2 vectors for all six implemented layouts;
+- exact v0.2 vectors for all seven implemented layouts;
 - one million randomized decoder inputs under sanitizer runs;
 - 10,000 uvarint round trips;
 - 2,000 randomized extension blocks;
-- canonicality, truncation, range, and buffer-boundary failures.
+- canonicality, truncation, range, and buffer-boundary failures;
+- the published extension vectors pinned against the decoder, rather than only
+  through C arrays, which prove nothing about the JSON an independent
+  implementation would actually read;
+- the Tier-0 body layout specification checked against the codec;
+- the source-size benchmark, run as a test so its cases cannot rot.
 
 The protocol library itself is also compiled in freestanding mode for small ARM and 32-bit RISC-V targets during portability checks.
 
