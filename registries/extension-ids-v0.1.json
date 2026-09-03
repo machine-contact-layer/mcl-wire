@@ -1,0 +1,96 @@
+{
+  "registry_version": "0.1-draft",
+  "status": "provisional",
+  "registry": "Wire extension identifiers",
+  "specification": "mcl-wire/spec/tier0-extensions-v0.1.md",
+  "allocation_policy_reference": "mcl-core/governance/REGISTRY_POLICY.md",
+
+  "purpose": "Assigned values for the extension `id` carried in the Tier-0 extension TLV key, which is encoded as (id << 1) | critical. The extension mechanism is implemented, specified and reachable from the public API; this registry is the assignment side of it, which did not exist. An extension mechanism without a registry is a mechanism whose first two independent users collide.",
+
+  "why_this_exists": [
+    "The envelope was frozen before the registry existed. That is the correct order -- there is no point allocating identifiers in a format that might still change -- but it left a gap where the specification described globally unambiguous namespace identification and nothing recorded which identifiers were taken.",
+    "ZERO STABLE ASSIGNMENTS IS THE EXPECTED STATE FOR v1.0, and is not a defect. No extension has yet demonstrated cross-vendor necessity, and inventing one to populate a table would be inventing it wrongly. What v1.0 requires is that the mechanism and its governance are ready on the day somebody asks.",
+    "The identifier space is not uniformly priced. The key is a uvarint over (id << 1) | critical, so ids 1..63 cost one byte and ids 64..8191 cost two. On the transport where bytes are scarcest that difference is the whole cost of carrying an extension, so the cheap range is allocated under the strictest policy rather than first-come."
+  ],
+
+  "id_encoding": {
+    "field": "extension id",
+    "range": "1 .. 2147483647",
+    "reserved_zero": "Zero is permanently reserved so a zeroed buffer can never decode as an extension. This is a property of the encoding, not a policy choice, and cannot be revoked.",
+    "key_encoding": "uvarint((id << 1) | critical)",
+    "cost": [
+      "id 1..63        -> 1-byte key",
+      "id 64..8191     -> 2-byte key",
+      "id 8192..1048575 -> 3-byte key"
+    ]
+  },
+
+  "ranges": [
+    {
+      "first": 0,
+      "last": 0,
+      "policy": "Reserved",
+      "detail": "Permanently reserved by the encoding. Never assignable."
+    },
+    {
+      "first": 1,
+      "last": 63,
+      "policy": "MCL Standards Action",
+      "detail": "The one-byte-key range. Scarce by construction: 63 values exist and each one that is spent is spent forever, because stable identifiers are never reused. An assignment here must show that the extension is domain-general, needed at first contact, and needed on a byte-scarce transport. Wanting a short identifier is not a reason to receive one."
+    },
+    {
+      "first": 64,
+      "last": 8191,
+      "policy": "MCL Standards Action",
+      "detail": "The ordinary Standards Action range. Same review as above without the scarcity argument."
+    },
+    {
+      "first": 8192,
+      "last": 1048575,
+      "policy": "Specification Required",
+      "detail": "Interoperable extensions that need not become part of Core. Requires a permanent public specification, designated technical review, clear wire semantics, defined compatibility and failure behaviour, and at least one conformance vector."
+    },
+    {
+      "first": 1048576,
+      "last": 2097151,
+      "policy": "Experimental Use",
+      "detail": "Research and local experiments. No stability and no global uniqueness are promised, so two experiments MAY collide and neither is wrong. An experimental value MUST NOT be silently promoted to a Stable meaning; promotion receives a new Stable assignment."
+    },
+    {
+      "first": 2097152,
+      "last": 4194303,
+      "policy": "Private Use",
+      "detail": "Vendor or site-local values, not globally coordinated. MUST NOT be required for baseline MCL interoperability. A deployment that needs two vendors to agree on a private value has misused this range."
+    },
+    {
+      "first": 4194304,
+      "last": 2147483647,
+      "policy": "Reserved",
+      "detail": "Unallocated. Held so that a future allocation policy has room to be made deliberately rather than by exhaustion of the ranges above."
+    }
+  ],
+
+  "assignments": [],
+
+  "assignment_requirements": {
+    "note": "Every entry in `assignments` must carry these fields. Enforced by tools/validate_extension_registry.c rather than by review alone.",
+    "required": [
+      "id",
+      "name",
+      "status",
+      "specification",
+      "criticality_guidance",
+      "detail"
+    ],
+    "criticality_guidance": "Each assignment must state whether a sender SHOULD mark it critical, and what a receiver that does not implement it loses by rejecting the whole object. Criticality is a per-message sender decision, not a property of the identifier -- but an identifier whose designers cannot say what rejecting it costs has not been thought through."
+  },
+
+  "no_reuse": "A Stable assignment is permanent. A withdrawn assignment leaves a tombstone with status `deprecated` and is never reissued to a different meaning, because a receiver built against the old meaning cannot tell that the number changed hands.",
+
+  "summary": {
+    "assigned": 0,
+    "deprecated": 0,
+    "total": 0,
+    "note": "Zero assignments. The mechanism is specified, implemented, vector-tested and reachable; the table is empty because no extension has yet earned a permanent number. That is the intended state at v1.0."
+  }
+}

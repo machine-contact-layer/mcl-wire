@@ -54,6 +54,21 @@ if(MCL_WIRE_BUILD_TESTS)
         C_STANDARD_REQUIRED YES
         C_EXTENSIONS NO)
     add_test(NAME mcl_wire_tier0_layout COMMAND mcl_wire_validate_tier0_layout)
+
+    # The extension mechanism is specified, implemented and reachable from the
+    # public API; this checks the registry that allocates for it. The table is
+    # empty, and this passing on an empty table is the point: the checks that
+    # make the first real assignment safe are in place before the pressure to
+    # add one is.
+    add_executable(mcl_wire_validate_extension_registry
+        tools/validate_extension_registry.c)
+    set_target_properties(mcl_wire_validate_extension_registry PROPERTIES
+        C_STANDARD 99
+        C_STANDARD_REQUIRED YES
+        C_EXTENSIONS NO)
+    add_test(NAME mcl_wire_extension_registry
+        COMMAND mcl_wire_validate_extension_registry
+        "${CMAKE_CURRENT_SOURCE_DIR}/registries/extension-ids-v0.1.json")
 endif()
 
 if(MCL_WIRE_BUILD_BENCHMARKS)
