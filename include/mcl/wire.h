@@ -148,7 +148,36 @@ mcl_wire_status_t mcl_wire_tier0_encode(
     size_t out_capacity,
     size_t *written);
 
+/*
+ * Decode a Tier-0 object.
+ *
+ * Refuses an object whose header sets extension_present, because this decoder
+ * cannot read extensions and an extension may be critical -- the sender saying
+ * the object must not be acted on without it. Returning the body and
+ * discarding the rest would turn "you must understand this" into "you may
+ * ignore this". To read extensions, use mcl_wire_tier0_decode_ext in
+ * mcl/extension.h.
+ */
 mcl_wire_status_t mcl_wire_tier0_decode(
+    const uint8_t *data,
+    size_t data_size,
+    mcl_wire_tier0_t *object,
+    size_t *consumed);
+
+/*
+ * Decode the fixed Tier-0 body ONLY, ignoring extension_present entirely.
+ *
+ * Shared between mcl_wire_tier0_decode and the extension-aware decoder, which
+ * is the reason it is public rather than static: extension handling lives in
+ * a separate translation unit so that a build with no use for extensions does
+ * not link them.
+ *
+ * `consumed` reports the fixed body length. Any extension block begins there.
+ * A caller using this directly is responsible for the extension_present bit,
+ * and gets no protection from a critical extension. Prefer the two functions
+ * above.
+ */
+mcl_wire_status_t mcl_wire_tier0_decode_body(
     const uint8_t *data,
     size_t data_size,
     mcl_wire_tier0_t *object,

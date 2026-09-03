@@ -393,7 +393,7 @@ mcl_wire_status_t mcl_wire_tier0_encode(
     return MCL_WIRE_OK;
 }
 
-mcl_wire_status_t mcl_wire_tier0_decode(
+mcl_wire_status_t mcl_wire_tier0_decode_body(
     const uint8_t *data,
     size_t data_size,
     mcl_wire_tier0_t *object,
@@ -414,10 +414,16 @@ mcl_wire_status_t mcl_wire_tier0_decode(
     }
 
     MCL_TRY(mcl_wire_header_decode(data, &header));
-    if (header.major_version != MCL_WIRE_EXPERIMENTAL_MAJOR ||
-        header.extension_present != 0u) {
+    if (header.major_version != MCL_WIRE_EXPERIMENTAL_MAJOR) {
         return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;
     }
+    /*
+     * extension_present is deliberately NOT examined here. This function
+     * decodes the fixed body only; whether an extension block follows, and
+     * what to do about it, belongs to the caller. mcl_wire_tier0_decode
+     * refuses objects carrying extensions, and mcl_wire_tier0_decode_ext
+     * reads them.
+     */
 
     MCL_TRY(mcl_code_to_kind(header.category, header.opcode, &kind));
     required = mcl_wire_tier0_encoded_size(kind);
@@ -519,4 +525,38 @@ mcl_wire_status_t mcl_wire_tier0_decode(
     MCL_TRY(mcl_require_zero_padding(&reader));
     *consumed = required;
     return MCL_WIRE_OK;
+}
+
+mcl_wire_status_t mcl_wire_tier0_decode(
+    const uint8_t *data,
+    size_t data_size,
+    mcl_wire_tier0_t *object,
+    size_t *consumed)
+{
+    mcl_wire_header_t header;
+
+    if (data == NULL || object == NULL || consumed == NULL) {
+        return MCL_WIRE_ERR_INVALID_ARGUMENT;
+    }
+    if (data_size < MCL_WIRE_COMMON_HEADER_SIZE) {
+        return MCL_WIRE_ERR_TRUNCATED;
+    }
+
+    MCL_TRY(mcl_wire_header_decode(data, &header));
+    if (header.extension_present != 0u) {
+        /*
+         * This decoder cannot read extensions, so it refuses an object that
+         * carries them rather than decoding the body and discarding the rest.
+         *
+         * That is the conservative direction and it is the required one: an
+         * extension may be CRITICAL, meaning the sender has said the object
+         * must not be acted on without it. Silently returning the body would
+         * turn "you must understand this" into "you may ignore this", which is
+         * how an extensible protocol quietly stops being safe. A caller that
+         * wants extensions calls mcl_wire_tier0_decode_ext.
+         */
+        return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;
+    }
+
+    return mcl_wire_tier0_decode_body(data, data_size, object, consumed);
 }

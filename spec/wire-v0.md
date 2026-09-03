@@ -144,6 +144,17 @@ For a fixed wire version and context:
 - extension ordering is deterministic
 - malformed or non-canonical encodings are rejectable
 
+Extension framing on Tier-0 objects is specified in
+[`tier0-extensions-v0.1.md`](tier0-extensions-v0.1.md), with vectors in
+`conformance/vectors/extensions-v0.1.json`. The block carries its own length so
+that a Tier-0 object remains **self-delimiting**, which the raw-Wire path over
+MCL-AP requires: bytes arrive from the air with no envelope stating where the
+object ends.
+
+An empty extension list encodes with the extension bit clear and no block, so
+there is exactly one encoding of any object and adding this capability changed
+no existing vector.
+
 ## 8. Baseline benchmark
 
 MCL Wire MUST be evaluated against strong alternatives rather than only text JSON.

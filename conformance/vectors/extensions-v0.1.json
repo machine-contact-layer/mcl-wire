@@ -1,0 +1,116 @@
+{
+  "vector_set": "mcl-wire-tier0-extensions",
+  "version": "0.1",
+  "status": "RESEARCH DRAFT",
+  "wire_major": 0,
+  "specification": "mcl-wire/spec/tier0-extensions-v0.1.md",
+  "immutability": "Once published, this file is never edited. A legitimate byte change gets a new version. These bytes are what an independent implementation is checked against; editing them to match new code would remove the only thing that makes the check meaningful.",
+  "generated_by": "The bytes were produced by the reference encoder and then checked against the layout by hand, not typed from the specification. mcl-wire/tools/validate_extension_vectors.c re-checks them against the decoder on every test run.",
+  "base_object": {
+    "kind": "PRESENCE",
+    "priority": 1,
+    "source_ref": 41340,
+    "machine_class": 3,
+    "capability_digest": 11259375,
+    "ttl": 60,
+    "note": "The same object carries every vector below, so any byte difference is attributable to the extension block alone."
+  },
+  "positive": [
+    {
+      "name": "no_extensions",
+      "extension_present": false,
+      "extension_count": 0,
+      "size": 11,
+      "bytes_hex": "00020000a17c03abcdef3c",
+      "why": "The empty case encodes with the bit clear and no block. This is byte-identical to what mcl_wire_tier0_encode produced before extensions were reachable, which is how adding the capability changed no existing vector."
+    },
+    {
+      "name": "one_noncritical",
+      "extension_present": true,
+      "extension_count": 1,
+      "block_length": 4,
+      "size": 16,
+      "bytes_hex": "00030000a17c03abcdef3c040e02dead",
+      "extensions": [
+        { "id": 7, "critical": false, "value_hex": "dead" }
+      ],
+      "why": "Block length 0x04, then key 0x0e = (7 << 1) | 0, then value length 0x02, then the value."
+    },
+    {
+      "name": "two_noncritical_multibyte_id",
+      "extension_present": true,
+      "extension_count": 2,
+      "block_length": 12,
+      "size": 24,
+      "bytes_hex": "00030000a17c03abcdef3c0c0e02deadc000050102030405",
+      "extensions": [
+        { "id": 7, "critical": false, "value_hex": "dead" },
+        { "id": 4096, "critical": false, "value_hex": "0102030405" }
+      ],
+      "why": "Id 4096 forces a two-byte key uvarint: 0xc000 encodes 8192 = (4096 << 1) | 0. Ids strictly increase."
+    },
+    {
+      "name": "empty_value",
+      "extension_present": true,
+      "extension_count": 1,
+      "block_length": 2,
+      "size": 14,
+      "bytes_hex": "00030000a17c03abcdef3c020200",
+      "extensions": [
+        { "id": 1, "critical": false, "value_hex": "" }
+      ],
+      "why": "A zero-length value is legal and distinct from an absent extension. The presence of the id is the signal."
+    }
+  ],
+  "negative": [
+    {
+      "name": "critical_unknown_id",
+      "bytes_hex": "00030000a17c03abcdef3c041302dead",
+      "expect": "UNSUPPORTED_SEMANTIC",
+      "why": "Key 0x13 = (9 << 1) | 1, a critical extension. No extension id is registered, so every critical extension is unknown to this implementation and the whole object is refused. Returning the body while dropping the extension would turn 'you must understand this' into 'you may ignore this'."
+    },
+    {
+      "name": "empty_block_with_bit_set",
+      "bytes_hex": "00030000a17c03abcdef3c00",
+      "expect": "NONCANONICAL",
+      "why": "extension_present set with a zero-length block. The empty case already has an encoding, with the bit clear, so this is a second encoding of the same object."
+    },
+    {
+      "name": "block_too_large",
+      "bytes_hex": "00030000a17c03abcdef3c8768",
+      "expect": "RANGE",
+      "why": "A declared block length of 1000, above MCL_WIRE_EXTENSION_BLOCK_MAX. Refused before any TLV inside it is read."
+    },
+    {
+      "name": "truncated_block",
+      "bytes_hex": "00030000a17c03abcdef3c040e02de",
+      "expect": "TRUNCATED",
+      "why": "The block declares four bytes and three follow. Distinct from malformation: more bytes could still complete it."
+    },
+    {
+      "name": "value_length_exceeds_block",
+      "bytes_hex": "00030000a17c03abcdef3c040e40dead",
+      "expect": "TRUNCATED",
+      "why": "A TLV whose declared value length runs past the end of the block it lives in."
+    },
+    {
+      "name": "extension_id_zero",
+      "bytes_hex": "00030000a17c03abcdef3c040002dead",
+      "expect": "NONCANONICAL",
+      "why": "Id 0 is permanently reserved so a zeroed buffer can never decode as an extension."
+    },
+    {
+      "name": "ids_not_increasing",
+      "bytes_hex": "00030000a17c03abcdef3c080e02dead0e02beef",
+      "expect": "NONCANONICAL",
+      "why": "The same id twice. Ids must strictly increase, so a set of extensions has exactly one encoding."
+    },
+    {
+      "name": "plain_decoder_refuses_extensions",
+      "bytes_hex": "00030000a17c03abcdef3c040e02dead",
+      "expect": "UNSUPPORTED_SEMANTIC",
+      "decoder": "mcl_wire_tier0_decode",
+      "why": "A decoder that cannot read extensions must refuse an object carrying them rather than decode the body and discard the rest. This is the same bytes as the one_noncritical positive vector, read by the extension-unaware decoder."
+    }
+  ]
+}

@@ -159,6 +159,195 @@ mcl_wire_status_t mcl_wire_extensions_encode(
     return MCL_WIRE_OK;
 }
 
+mcl_wire_status_t mcl_wire_extensions_encoded_size(
+    const mcl_wire_extension_t *extensions,
+    size_t extension_count,
+    size_t *size)
+{
+    size_t total = 0u;
+    size_t i;
+    uint32_t previous_id = 0u;
+
+    if ((extension_count != 0u && extensions == NULL) || size == NULL) {
+        return MCL_WIRE_ERR_INVALID_ARGUMENT;
+    }
+
+    for (i = 0u; i < extension_count; ++i) {
+        const mcl_wire_extension_t *extension = &extensions[i];
+        uint32_t key;
+        size_t field;
+
+        /* Validation identical to mcl_wire_extensions_encode, so that a
+         * successful size call means the encode will succeed given the room.
+         * The two must not drift; a size that disagreed with the encoder would
+         * produce a length prefix that did not match the block after it. */
+        if (extension->id == 0u || extension->id > (UINT32_MAX >> 1) ||
+            extension->critical > 1u ||
+            (extension->value_size != 0u && extension->value == NULL) ||
+            extension->value_size > UINT32_MAX) {
+            return MCL_WIRE_ERR_RANGE;
+        }
+        if (i != 0u && extension->id <= previous_id) {
+            return MCL_WIRE_ERR_NONCANONICAL;
+        }
+
+        key = (extension->id << 1) | (uint32_t)extension->critical;
+        field = mcl_uvarint_size(key) +
+                mcl_uvarint_size((uint32_t)extension->value_size);
+
+        /*
+         * Bounded before every addition rather than after the sum, so the
+         * total cannot wrap on a 32-bit size_t. This implementation never
+         * encodes a block larger than the largest it will accept.
+         */
+        if (field > (size_t)MCL_WIRE_EXTENSION_BLOCK_MAX - total) {
+            return MCL_WIRE_ERR_RANGE;
+        }
+        total += field;
+        if (extension->value_size > (size_t)MCL_WIRE_EXTENSION_BLOCK_MAX - total) {
+            return MCL_WIRE_ERR_RANGE;
+        }
+        total += extension->value_size;
+
+        previous_id = extension->id;
+    }
+
+    *size = total;
+    return MCL_WIRE_OK;
+}
+
+mcl_wire_status_t mcl_wire_tier0_encode_ext(
+    const mcl_wire_tier0_t *object,
+    const mcl_wire_extension_t *extensions,
+    size_t extension_count,
+    uint8_t *out,
+    size_t out_capacity,
+    size_t *written)
+{
+    size_t body = 0u;
+    size_t block = 0u;
+    size_t length_size = 0u;
+    size_t block_written = 0u;
+
+    if (object == NULL || out == NULL || written == NULL) {
+        return MCL_WIRE_ERR_INVALID_ARGUMENT;
+    }
+
+    if (extension_count == 0u) {
+        /*
+         * The empty case has exactly one encoding, and it is the one without a
+         * block. Emitting extension_present with a zero-length block would give
+         * the same object two valid encodings, which is what a canonical format
+         * exists to prevent.
+         */
+        return mcl_wire_tier0_encode(object, out, out_capacity, written);
+    }
+    if (extensions == NULL) {
+        return MCL_WIRE_ERR_INVALID_ARGUMENT;
+    }
+
+    MCL_TRY(mcl_wire_extensions_encoded_size(extensions, extension_count,
+                                             &block));
+    MCL_TRY(mcl_wire_tier0_encode(object, out, out_capacity, &body));
+
+    MCL_TRY(mcl_wire_uvarint_encode((uint32_t)block, out + body,
+                                    out_capacity - body, &length_size));
+
+    MCL_TRY(mcl_wire_extensions_encode(extensions, extension_count,
+                                       out + body + length_size,
+                                       out_capacity - body - length_size,
+                                       &block_written));
+    if (block_written != block) {
+        /* The size function and the encoder disagreed, which would leave a
+         * length prefix describing a different block than the one written. */
+        return MCL_WIRE_ERR_RANGE;
+    }
+
+    /* extension_present is bit 0 of the second header byte. Set after the body
+     * is encoded, because mcl_wire_tier0_encode always clears it. */
+    out[1] = (uint8_t)(out[1] | 0x01u);
+
+    *written = body + length_size + block;
+    return MCL_WIRE_OK;
+}
+
+mcl_wire_status_t mcl_wire_tier0_decode_ext(
+    const uint8_t *data,
+    size_t data_size,
+    mcl_wire_tier0_t *object,
+    mcl_wire_extension_reader_t *reader,
+    size_t *consumed)
+{
+    mcl_wire_header_t header;
+    mcl_wire_extension_reader_t scan;
+    mcl_wire_extension_t extension;
+    size_t body = 0u;
+    size_t length_size = 0u;
+    uint32_t block_length = 0u;
+    uint8_t has_extension = 0u;
+
+    if (data == NULL || object == NULL || reader == NULL || consumed == NULL) {
+        return MCL_WIRE_ERR_INVALID_ARGUMENT;
+    }
+    if (data_size < MCL_WIRE_COMMON_HEADER_SIZE) {
+        return MCL_WIRE_ERR_TRUNCATED;
+    }
+
+    MCL_TRY(mcl_wire_header_decode(data, &header));
+    MCL_TRY(mcl_wire_tier0_decode_body(data, data_size, object, &body));
+
+    if (header.extension_present == 0u) {
+        mcl_wire_extension_reader_init(reader, data + body, 0u);
+        *consumed = body;
+        return MCL_WIRE_OK;
+    }
+
+    MCL_TRY(mcl_wire_uvarint_decode(data + body, data_size - body,
+                                    &block_length, &length_size));
+
+    if (block_length == 0u) {
+        /* extension_present with nothing in it. The empty case already has an
+         * encoding, with the bit clear, so this one is not canonical. */
+        return MCL_WIRE_ERR_NONCANONICAL;
+    }
+    if (block_length > MCL_WIRE_EXTENSION_BLOCK_MAX) {
+        return MCL_WIRE_ERR_RANGE;
+    }
+    if ((size_t)block_length > data_size - body - length_size) {
+        return MCL_WIRE_ERR_TRUNCATED;
+    }
+
+    /*
+     * The whole block is validated before anything is returned. Validating
+     * lazily during iteration would let a caller act on the object and the
+     * first few extensions before discovering that a later critical one made
+     * the object undecodable in the first place.
+     */
+    mcl_wire_extension_reader_init(&scan, data + body + length_size,
+                                   (size_t)block_length);
+    for (;;) {
+        MCL_TRY(mcl_wire_extension_reader_next(&scan, &extension,
+                                               &has_extension));
+        if (has_extension == 0u) {
+            break;
+        }
+        if (extension.critical != 0u) {
+            /*
+             * No extension id is registered, so every critical extension is
+             * unknown to this implementation and the object must be refused.
+             * An id becomes known by being registered and implemented, not by
+             * being tolerated here.
+             */
+            return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;
+        }
+    }
+
+    mcl_wire_extension_reader_init(reader, data + body + length_size,
+                                   (size_t)block_length);
+    *consumed = body + length_size + (size_t)block_length;
+    return MCL_WIRE_OK;
+}
+
 void mcl_wire_extension_reader_init(
     mcl_wire_extension_reader_t *reader,
     const uint8_t *data,

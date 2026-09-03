@@ -25,6 +25,21 @@ if(MCL_WIRE_BUILD_TESTS)
             C_EXTENSIONS NO)
         add_test(NAME mcl_wire_${test_name} COMMAND mcl_wire_test_${test_name})
     endforeach()
+
+    # Pins the PUBLISHED extension vectors against the decoder. test_extension.c
+    # exercises the same behaviour through C arrays, which proves nothing about
+    # the JSON an independent implementer would download; the two can drift
+    # invisibly.
+    add_executable(mcl_wire_validate_extension_vectors
+        tools/validate_extension_vectors.c)
+    target_link_libraries(mcl_wire_validate_extension_vectors PRIVATE mcl_wire)
+    set_target_properties(mcl_wire_validate_extension_vectors PROPERTIES
+        C_STANDARD 99
+        C_STANDARD_REQUIRED YES
+        C_EXTENSIONS NO)
+    add_test(NAME mcl_wire_extension_vectors
+        COMMAND mcl_wire_validate_extension_vectors
+        "${CMAKE_CURRENT_SOURCE_DIR}/conformance/vectors/extensions-v0.1.json")
 endif()
 
 if(MCL_WIRE_BUILD_BENCHMARKS)

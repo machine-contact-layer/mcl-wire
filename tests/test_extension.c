@@ -152,11 +152,343 @@ static void test_negative_cases(void)
     }
 }
 
+/* ============================================================
+ * Extensions reachable from the Tier-0 API.
+ *
+ * The framework above was implemented and untestable through the normal
+ * encode/decode path for most of this project's life: the Tier-0 encoder
+ * hard-set extension_present to 0 and the decoder refused any object that set
+ * it. These tests exist because "the mechanism exists" and "a caller can use
+ * it" turned out to be different claims.
+ * ============================================================ */
+
+static void make_presence(mcl_wire_tier0_t *object)
+{
+    memset(object, 0, sizeof(*object));
+    object->kind = MCL_WIRE_KIND_PRESENCE;
+    object->priority = 1u;
+    object->source_ref = 0x0000A17Cu;
+    object->body.presence.machine_class = 3u;
+    object->body.presence.capability_digest = 0x00ABCDEFu;
+    object->body.presence.ttl = 60u;
+}
+
+static void test_tier0_without_extensions_is_unchanged(void)
+{
+    mcl_wire_tier0_t object;
+    mcl_wire_tier0_t plain;
+    mcl_wire_tier0_t decoded;
+    mcl_wire_extension_reader_t reader;
+    uint8_t with_api[MCL_WIRE_TIER0_EXT_MAX_SIZE];
+    uint8_t without[MCL_WIRE_TIER0_MAX_SIZE];
+    size_t a = 0u;
+    size_t b = 0u;
+    size_t consumed = 0u;
+    size_t i;
+    uint8_t has_extension = 1u;
+    mcl_wire_extension_t extension;
+
+    make_presence(&object);
+
+    /* Passing no extensions must produce byte-identical output to the plain
+     * encoder. Otherwise adding the capability silently changes every object
+     * already in the vectors. */
+    CHECK_STATUS(mcl_wire_tier0_encode_ext(&object, NULL, 0u, with_api,
+                                           sizeof(with_api), &a), MCL_WIRE_OK);
+    CHECK_STATUS(mcl_wire_tier0_encode(&object, without, sizeof(without), &b),
+                 MCL_WIRE_OK);
+    CHECK_TRUE(a == b);
+    for (i = 0u; i < a; ++i) {
+        CHECK_TRUE(with_api[i] == without[i]);
+    }
+    CHECK_TRUE((with_api[1] & 0x01u) == 0u);
+
+    /* And the plain decoder still reads it. */
+    CHECK_STATUS(mcl_wire_tier0_decode(with_api, a, &plain, &consumed),
+                 MCL_WIRE_OK);
+    CHECK_TRUE(consumed == a);
+
+    /* The extension-aware decoder reads it too, with an empty reader. */
+    CHECK_STATUS(mcl_wire_tier0_decode_ext(with_api, a, &decoded, &reader,
+                                           &consumed), MCL_WIRE_OK);
+    CHECK_TRUE(consumed == a);
+    CHECK_STATUS(mcl_wire_extension_reader_next(&reader, &extension,
+                                                &has_extension), MCL_WIRE_OK);
+    CHECK_TRUE(has_extension == 0u);
+}
+
+static void test_tier0_round_trip_with_extensions(void)
+{
+    mcl_wire_tier0_t object;
+    mcl_wire_tier0_t decoded;
+    mcl_wire_extension_t extensions[2];
+    mcl_wire_extension_reader_t reader;
+    mcl_wire_extension_t read_back;
+    static const uint8_t value_a[] = {0xDEu, 0xADu};
+    static const uint8_t value_b[] = {0x01u, 0x02u, 0x03u, 0x04u, 0x05u};
+    uint8_t buffer[MCL_WIRE_TIER0_EXT_MAX_SIZE];
+    size_t written = 0u;
+    size_t consumed = 0u;
+    size_t body_only = 0u;
+    uint8_t has_extension = 0u;
+
+    make_presence(&object);
+
+    extensions[0].id = 7u;
+    extensions[0].critical = 0u;
+    extensions[0].value = value_a;
+    extensions[0].value_size = sizeof(value_a);
+    extensions[1].id = 4096u;          /* forces a two-byte key uvarint */
+    extensions[1].critical = 0u;
+    extensions[1].value = value_b;
+    extensions[1].value_size = sizeof(value_b);
+
+    CHECK_STATUS(mcl_wire_tier0_encode_ext(&object, extensions, 2u, buffer,
+                                           sizeof(buffer), &written),
+                 MCL_WIRE_OK);
+    CHECK_TRUE((buffer[1] & 0x01u) != 0u);
+
+    /*
+     * The object is SELF-DELIMITING: its length is knowable from its own
+     * bytes. Proven by decoding it out of a larger buffer with unrelated bytes
+     * after it and checking `consumed` still reports the object alone. This is
+     * what the raw-Wire path over AP needs, because nothing there supplies an
+     * outer boundary the way a Link frame's payload_len does.
+     */
+    body_only = written;
+    memset(buffer + written, 0xFFu, sizeof(buffer) - written);
+    CHECK_STATUS(mcl_wire_tier0_decode_ext(buffer, sizeof(buffer), &decoded,
+                                           &reader, &consumed), MCL_WIRE_OK);
+    CHECK_TRUE(consumed == body_only);
+
+    CHECK_STATUS(mcl_wire_tier0_decode_ext(buffer, written, &decoded, &reader,
+                                           &consumed), MCL_WIRE_OK);
+    CHECK_TRUE(consumed == written);
+    CHECK_TRUE(decoded.kind == MCL_WIRE_KIND_PRESENCE);
+    CHECK_TRUE(decoded.source_ref == object.source_ref);
+    CHECK_TRUE(decoded.body.presence.ttl == 60u);
+
+    CHECK_STATUS(mcl_wire_extension_reader_next(&reader, &read_back,
+                                                &has_extension), MCL_WIRE_OK);
+    CHECK_TRUE(has_extension == 1u);
+    CHECK_TRUE(read_back.id == 7u);
+    CHECK_TRUE(read_back.critical == 0u);
+    CHECK_TRUE(read_back.value_size == sizeof(value_a));
+    CHECK_TRUE(read_back.value[0] == 0xDEu && read_back.value[1] == 0xADu);
+
+    CHECK_STATUS(mcl_wire_extension_reader_next(&reader, &read_back,
+                                                &has_extension), MCL_WIRE_OK);
+    CHECK_TRUE(has_extension == 1u);
+    CHECK_TRUE(read_back.id == 4096u);
+    CHECK_TRUE(read_back.value_size == sizeof(value_b));
+
+    CHECK_STATUS(mcl_wire_extension_reader_next(&reader, &read_back,
+                                                &has_extension), MCL_WIRE_OK);
+    CHECK_TRUE(has_extension == 0u);
+
+    /*
+     * A decoder that cannot read extensions must REFUSE this object, not
+     * return the body and discard the rest. An extension may be critical, and
+     * quietly dropping it would turn "you must understand this" into "you may
+     * ignore this".
+     */
+    CHECK_STATUS(mcl_wire_tier0_decode(buffer, written, &decoded, &consumed),
+                 MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC);
+}
+
+static void test_critical_extension_is_refused(void)
+{
+    mcl_wire_tier0_t object;
+    mcl_wire_tier0_t decoded;
+    mcl_wire_extension_t extensions[2];
+    mcl_wire_extension_reader_t reader;
+    static const uint8_t value[] = {0x99u};
+    uint8_t buffer[MCL_WIRE_TIER0_EXT_MAX_SIZE];
+    size_t written = 0u;
+    size_t consumed = 0u;
+
+    make_presence(&object);
+
+    /* A non-critical extension first, then a critical one. The critical one
+     * must poison the whole object rather than only the tail of the block:
+     * validating lazily would let a caller act on the object and the first
+     * extension before discovering the object was never decodable. */
+    extensions[0].id = 2u;
+    extensions[0].critical = 0u;
+    extensions[0].value = value;
+    extensions[0].value_size = sizeof(value);
+    extensions[1].id = 9u;
+    extensions[1].critical = 1u;
+    extensions[1].value = value;
+    extensions[1].value_size = sizeof(value);
+
+    CHECK_STATUS(mcl_wire_tier0_encode_ext(&object, extensions, 2u, buffer,
+                                           sizeof(buffer), &written),
+                 MCL_WIRE_OK);
+    CHECK_STATUS(mcl_wire_tier0_decode_ext(buffer, written, &decoded, &reader,
+                                           &consumed),
+                 MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC);
+
+    /* No extension id is registered, so this holds for every critical id. */
+    extensions[0].critical = 1u;
+    CHECK_STATUS(mcl_wire_tier0_encode_ext(&object, extensions, 1u, buffer,
+                                           sizeof(buffer), &written),
+                 MCL_WIRE_OK);
+    CHECK_STATUS(mcl_wire_tier0_decode_ext(buffer, written, &decoded, &reader,
+                                           &consumed),
+                 MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC);
+}
+
+static void test_tier0_extension_negatives(void)
+{
+    mcl_wire_tier0_t object;
+    mcl_wire_tier0_t decoded;
+    mcl_wire_extension_t extensions[2];
+    mcl_wire_extension_reader_t reader;
+    static const uint8_t value[] = {0x11u, 0x22u};
+    uint8_t buffer[MCL_WIRE_TIER0_EXT_MAX_SIZE];
+    size_t written = 0u;
+    size_t consumed = 0u;
+    size_t body = 0u;
+    size_t i;
+
+    make_presence(&object);
+    extensions[0].id = 5u;
+    extensions[0].critical = 0u;
+    extensions[0].value = value;
+    extensions[0].value_size = sizeof(value);
+
+    CHECK_STATUS(mcl_wire_tier0_encode_ext(&object, extensions, 1u, buffer,
+                                           sizeof(buffer), &written),
+                 MCL_WIRE_OK);
+    (void)body;
+
+    /* Every truncation of a valid object reports truncation, never a partial
+     * decode. Anything that decoded a prefix would let a peer act on half an
+     * object. */
+    for (i = 1u; i < written; ++i) {
+        const mcl_wire_status_t st =
+            mcl_wire_tier0_decode_ext(buffer, i, &decoded, &reader, &consumed);
+        CHECK_TRUE(st == MCL_WIRE_ERR_TRUNCATED);
+    }
+
+    /* extension_present set with an empty block: not canonical, because the
+     * empty case already has an encoding with the bit clear. */
+    {
+        uint8_t empty_block[MCL_WIRE_TIER0_MAX_SIZE + 1u];
+        size_t plain = 0u;
+        CHECK_STATUS(mcl_wire_tier0_encode(&object, empty_block,
+                                           sizeof(empty_block), &plain),
+                     MCL_WIRE_OK);
+        empty_block[1] = (uint8_t)(empty_block[1] | 0x01u);
+        empty_block[plain] = 0x00u;   /* uvarint 0 */
+        CHECK_STATUS(mcl_wire_tier0_decode_ext(empty_block, plain + 1u,
+                                               &decoded, &reader, &consumed),
+                     MCL_WIRE_ERR_NONCANONICAL);
+    }
+
+    /* A block length larger than this implementation accepts is refused before
+     * anything is read from it. */
+    {
+        uint8_t oversized[MCL_WIRE_TIER0_MAX_SIZE + 4u];
+        size_t plain = 0u;
+        CHECK_STATUS(mcl_wire_tier0_encode(&object, oversized,
+                                           sizeof(oversized), &plain),
+                     MCL_WIRE_OK);
+        oversized[1] = (uint8_t)(oversized[1] | 0x01u);
+        /* uvarint for 1000, which exceeds MCL_WIRE_EXTENSION_BLOCK_MAX */
+        oversized[plain] = 0x87u;
+        oversized[plain + 1u] = 0x68u;
+        CHECK_STATUS(mcl_wire_tier0_decode_ext(oversized, plain + 2u, &decoded,
+                                               &reader, &consumed),
+                     MCL_WIRE_ERR_RANGE);
+    }
+
+    /* Ids must strictly increase. Refused rather than sorted, because sorting
+     * would let two callers disagree about what they sent while both believing
+     * they had succeeded. */
+    extensions[1].id = 5u;
+    extensions[1].critical = 0u;
+    extensions[1].value = value;
+    extensions[1].value_size = sizeof(value);
+    CHECK_STATUS(mcl_wire_tier0_encode_ext(&object, extensions, 2u, buffer,
+                                           sizeof(buffer), &written),
+                 MCL_WIRE_ERR_NONCANONICAL);
+    extensions[1].id = 4u;
+    CHECK_STATUS(mcl_wire_tier0_encode_ext(&object, extensions, 2u, buffer,
+                                           sizeof(buffer), &written),
+                 MCL_WIRE_ERR_NONCANONICAL);
+
+    /* Id 0 is reserved so a zeroed extension is never valid. */
+    extensions[1].id = 0u;
+    CHECK_STATUS(mcl_wire_tier0_encode_ext(&object, extensions, 2u, buffer,
+                                           sizeof(buffer), &written),
+                 MCL_WIRE_ERR_RANGE);
+
+    /* A buffer that fits the body but not the block fails as a whole, leaving
+     * no half-written object behind a success code. */
+    extensions[1].id = 9u;
+    CHECK_STATUS(mcl_wire_tier0_encode_ext(&object, extensions, 2u, buffer,
+                                           MCL_WIRE_TIER0_MAX_SIZE + 1u,
+                                           &written),
+                 MCL_WIRE_ERR_BUFFER_TOO_SMALL);
+
+    CHECK_STATUS(mcl_wire_tier0_encode_ext(NULL, extensions, 1u, buffer,
+                                           sizeof(buffer), &written),
+                 MCL_WIRE_ERR_INVALID_ARGUMENT);
+    CHECK_STATUS(mcl_wire_tier0_encode_ext(&object, NULL, 1u, buffer,
+                                           sizeof(buffer), &written),
+                 MCL_WIRE_ERR_INVALID_ARGUMENT);
+    CHECK_STATUS(mcl_wire_tier0_decode_ext(buffer, written, &decoded, NULL,
+                                           &consumed),
+                 MCL_WIRE_ERR_INVALID_ARGUMENT);
+}
+
+/* The block cap must be enforced at encode time too, not only on decode. */
+static void test_extension_block_cap(void)
+{
+    mcl_wire_tier0_t object;
+    mcl_wire_extension_t extension;
+    uint8_t big[MCL_WIRE_EXTENSION_BLOCK_MAX + 8u];
+    uint8_t buffer[MCL_WIRE_TIER0_EXT_MAX_SIZE + 16u];
+    size_t written = 0u;
+    size_t size = 0u;
+
+    make_presence(&object);
+    memset(big, 0x5Au, sizeof(big));
+
+    extension.id = 1u;
+    extension.critical = 0u;
+    extension.value = big;
+    extension.value_size = MCL_WIRE_EXTENSION_BLOCK_MAX;
+
+    CHECK_STATUS(mcl_wire_extensions_encoded_size(&extension, 1u, &size),
+                 MCL_WIRE_ERR_RANGE);
+    CHECK_STATUS(mcl_wire_tier0_encode_ext(&object, &extension, 1u, buffer,
+                                           sizeof(buffer), &written),
+                 MCL_WIRE_ERR_RANGE);
+
+    /* Just inside the cap, allowing for the two uvarints, does encode. */
+    extension.value_size = MCL_WIRE_EXTENSION_BLOCK_MAX - 4u;
+    CHECK_STATUS(mcl_wire_extensions_encoded_size(&extension, 1u, &size),
+                 MCL_WIRE_OK);
+    CHECK_TRUE(size <= MCL_WIRE_EXTENSION_BLOCK_MAX);
+    CHECK_STATUS(mcl_wire_tier0_encode_ext(&object, &extension, 1u, buffer,
+                                           sizeof(buffer), &written),
+                 MCL_WIRE_OK);
+    CHECK_TRUE(written <= MCL_WIRE_TIER0_EXT_MAX_SIZE);
+}
+
 int main(void)
 {
     test_uvarint();
     test_extension_blocks();
     test_negative_cases();
+    test_tier0_without_extensions_is_unchanged();
+    test_tier0_round_trip_with_extensions();
+    test_critical_extension_is_refused();
+    test_tier0_extension_negatives();
+    test_extension_block_cap();
     puts("uvarint random round trips: 10000 PASS");
     puts("extension block random round trips: 2000 PASS");
     puts("canonicality/length/criticality exposure: PASS");
