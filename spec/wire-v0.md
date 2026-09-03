@@ -18,7 +18,7 @@ Properties:
 - deterministic layout
 - no schema negotiation required
 - decodable by small embedded implementations
-- suitable for presence, basic hazard, compact request, capability digest, authority/identity references, transport offer, and acknowledgement
+- suitable for presence, basic hazard, compact request, capability tag, authority/identity references, transport offer, and acknowledgement
 
 Initial size hypothesis: many Tier-0 objects should be evaluated in the 16–64 byte range before channel coding. This is a benchmark target, not a normative limit.
 
@@ -66,11 +66,13 @@ nothing to work from but the reference source and the vectors — inverting the
 project's own rule that the specification is authoritative and the
 implementation subordinate.
 
-**What is authoritative is the LAYOUT, not every field's MEANING.** Sixteen of
-the twenty-one Tier-0 fields carry values on which two independent
-implementations would not agree, because no registry assigns them; the
-coordinate fields have no defined frame of reference at all. That is recorded
-field by field in
+**What is authoritative is the LAYOUT, not every field's MEANING.** A number of
+the Tier-0 fields carry values on which two independent implementations would
+not agree, because no registry assigns them; the coordinate fields have no
+defined frame of reference at all. The exact count is deliberately not written
+here — it changes as fields close, and a stale number in a specification is
+worse than no number. It is recorded field by field, with a machine-checkable
+status on each, in
 [`mcl-core/registries/tier0-fields-v0.1.json`](../../mcl-core/registries/tier0-fields-v0.1.json)
 and summarised in `tier0-layout-v0.2.md` §7. Bit-perfect decoding without shared
 meaning is not interoperability, and the gap is stated rather than left to be

@@ -100,8 +100,14 @@ static void test_rounds_down_never_up(void)
 
     printf("[TEST] a duration between two codes rounds down\n");
 
-    for (seconds = 0u; seconds <= MCL_WIRE_DURATION_MAX_SECONDS;
-         seconds += (seconds < 4096u) ? 1u : 997u) {
+    /* Every representable second, not a sample. This loop used to step by 997
+     * above 4096 to stay quick, which left most of the range unvisited -- and
+     * the range is exactly where the encoder's band-gap defect lived: the
+     * value bands 16<<(e-1) .. 31<<(e-1) do not touch, and selecting a band by
+     * "first top not below seconds" landed ABOVE the gap, turning four days
+     * into six. A sampled loop can miss a gap. Half a million iterations of
+     * two shifts costs nothing, so there is no reason to sample. */
+    for (seconds = 0u; seconds <= MCL_WIRE_DURATION_MAX_SECONDS; ++seconds) {
         uint8_t code = 0u;
         uint32_t decoded;
 

@@ -54,9 +54,11 @@ code, and `tools/validate_tier0_layout.c` checks that specification against the
 codec on every test run.
 
 **Layout interoperability is substantially solved; meaning interoperability is
-not.** Sixteen of the 21 primitive field meanings are still unsettled, recorded
-field by field in
-[`tier0-fields-v0.1.json`](../mcl-core/registries/tier0-fields-v0.1.json). Three
+not.** A significant fraction of the primitive field meanings are still
+unsettled. The authoritative count is not restated here, because a number
+written into prose rots the moment a field closes: it is derived from
+[`tier0-fields-v0.1.json`](../mcl-core/registries/tier0-fields-v0.1.json), which
+is machine-checked, and printed by the local gate run. Three
 of the seven objects are proposed Stable for v1 on that basis; see
 [`V1_SCOPE.md`](../mcl-core/governance/V1_SCOPE.md).
 
