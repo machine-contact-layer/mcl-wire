@@ -136,6 +136,34 @@ mcl_wire_status_t mcl_wire_tier0_encode_ext(
     size_t *written);
 
 /*
+ * Does this caller understand extension `extension_id`?
+ *
+ * Returns 1 for an id the caller implements, 0 otherwise. Called during
+ * decoding for every CRITICAL extension in the block; a 0 makes the whole
+ * object undecodable.
+ *
+ * WHY THIS IS A CALLBACK AND NOT A TABLE
+ *
+ * "Known" is a property of the implementation doing the decoding, not of the
+ * codec. Two programs linking this same library legitimately support different
+ * extension sets, and a library-owned table would force them to agree. It would
+ * also have to live somewhere, and this library has no heap and no globals.
+ *
+ * A predicate keeps the library ignorant of which extensions exist -- which is
+ * the correct division, because the registry is a governance artifact and the
+ * codec is not. It also means adding an extension registry later requires no
+ * change to this decode contract, which is exactly the problem this closes:
+ * before it existed, every critical extension was refused unconditionally and
+ * there was no way to ever accept one without changing the API.
+ *
+ * It MUST be a pure predicate. It is called during validation, before the
+ * object is returned, and must not decode, allocate, or act on anything.
+ */
+typedef uint8_t (*mcl_wire_extension_known_fn)(
+    void *user,
+    uint32_t extension_id);
+
+/*
  * Decode a Tier-0 object that may carry extensions.
  *
  * On success `reader` is positioned at the start of the extension block, empty
@@ -154,6 +182,29 @@ mcl_wire_status_t mcl_wire_tier0_decode_ext(
     size_t data_size,
     mcl_wire_tier0_t *object,
     mcl_wire_extension_reader_t *reader,
+    size_t *consumed);
+
+/*
+ * As above, but the caller states which extension ids it understands.
+ *
+ * `known` is consulted for every critical extension. Passing NULL means the
+ * caller understands none, which is what mcl_wire_tier0_decode_ext does and why
+ * that function refuses every critical extension. Non-critical extensions never
+ * consult it -- an unknown one is skipped by definition and stays readable
+ * through the reader.
+ *
+ * The whole block is still validated before the object is returned, so a
+ * critical extension the caller does not know makes the object undecodable even
+ * if it appears after ones the caller does know. Discovering that halfway
+ * through iteration would be too late: the caller would already have acted.
+ */
+mcl_wire_status_t mcl_wire_tier0_decode_ext_known(
+    const uint8_t *data,
+    size_t data_size,
+    mcl_wire_tier0_t *object,
+    mcl_wire_extension_reader_t *reader,
+    mcl_wire_extension_known_fn known,
+    void *user,
     size_t *consumed);
 
 #ifdef __cplusplus

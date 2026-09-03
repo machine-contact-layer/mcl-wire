@@ -479,6 +479,108 @@ static void test_extension_block_cap(void)
     CHECK_TRUE(written <= MCL_WIRE_TIER0_EXT_MAX_SIZE);
 }
 
+/*
+ * A caller states which critical extension ids it implements.
+ *
+ * Before this existed, every critical extension was refused unconditionally and
+ * there was no way to ever accept one. An extension registry could have been
+ * written and the decoder still could not have honoured it, because the decode
+ * contract had nowhere to say "I understand id 17".
+ */
+static uint32_t g_known_id;
+static unsigned g_known_calls;
+
+static uint8_t knows_one_id(void *user, uint32_t extension_id)
+{
+    (void)user;
+    ++g_known_calls;
+    return (extension_id == g_known_id) ? 1u : 0u;
+}
+
+static void test_critical_extension_recognition(void)
+{
+    mcl_wire_tier0_t object;
+    mcl_wire_tier0_t decoded;
+    mcl_wire_extension_t extensions[2];
+    mcl_wire_extension_reader_t reader;
+    static const uint8_t value[] = {0x77u};
+    uint8_t buffer[MCL_WIRE_TIER0_EXT_MAX_SIZE];
+    size_t written = 0u;
+    size_t consumed = 0u;
+
+    make_presence(&object);
+    extensions[0].id = 17u;
+    extensions[0].critical = 1u;
+    extensions[0].value = value;
+    extensions[0].value_size = sizeof(value);
+
+    CHECK_STATUS(mcl_wire_tier0_encode_ext(&object, extensions, 1u, buffer,
+                                           sizeof(buffer), &written),
+                 MCL_WIRE_OK);
+
+    /* Understood: the object decodes. */
+    g_known_id = 17u;
+    g_known_calls = 0u;
+    CHECK_STATUS(mcl_wire_tier0_decode_ext_known(buffer, written, &decoded,
+                                                 &reader, knows_one_id, NULL,
+                                                 &consumed), MCL_WIRE_OK);
+    CHECK_TRUE(consumed == written);
+    CHECK_TRUE(g_known_calls == 1u);
+
+    /* Not understood: the whole object is refused. */
+    g_known_id = 18u;
+    CHECK_STATUS(mcl_wire_tier0_decode_ext_known(buffer, written, &decoded,
+                                                 &reader, knows_one_id, NULL,
+                                                 &consumed),
+                 MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC);
+
+    /* No predicate means nothing is understood, which is what the plain
+     * extension decoder does. */
+    CHECK_STATUS(mcl_wire_tier0_decode_ext_known(buffer, written, &decoded,
+                                                 &reader, NULL, NULL,
+                                                 &consumed),
+                 MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC);
+    CHECK_STATUS(mcl_wire_tier0_decode_ext(buffer, written, &decoded, &reader,
+                                           &consumed),
+                 MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC);
+
+    /* The predicate is consulted for critical extensions only. A non-critical
+     * unknown one is skipped by definition. */
+    extensions[0].critical = 0u;
+    CHECK_STATUS(mcl_wire_tier0_encode_ext(&object, extensions, 1u, buffer,
+                                           sizeof(buffer), &written),
+                 MCL_WIRE_OK);
+    g_known_id = 99u;
+    g_known_calls = 0u;
+    CHECK_STATUS(mcl_wire_tier0_decode_ext_known(buffer, written, &decoded,
+                                                 &reader, knows_one_id, NULL,
+                                                 &consumed), MCL_WIRE_OK);
+    CHECK_TRUE(g_known_calls == 0u);
+
+    /*
+     * A known critical extension followed by an unknown one still refuses the
+     * whole object. Validation completes before anything is returned, so a
+     * caller cannot act on the object and the extensions it understood before
+     * discovering the object was never decodable.
+     */
+    extensions[0].id = 17u;
+    extensions[0].critical = 1u;
+    extensions[0].value = value;
+    extensions[0].value_size = sizeof(value);
+    extensions[1].id = 33u;
+    extensions[1].critical = 1u;
+    extensions[1].value = value;
+    extensions[1].value_size = sizeof(value);
+    CHECK_STATUS(mcl_wire_tier0_encode_ext(&object, extensions, 2u, buffer,
+                                           sizeof(buffer), &written),
+                 MCL_WIRE_OK);
+    g_known_id = 17u;
+    CHECK_STATUS(mcl_wire_tier0_decode_ext_known(buffer, written, &decoded,
+                                                 &reader, knows_one_id, NULL,
+                                                 &consumed),
+                 MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC);
+}
+
 int main(void)
 {
     test_uvarint();
@@ -489,6 +591,7 @@ int main(void)
     test_critical_extension_is_refused();
     test_tier0_extension_negatives();
     test_extension_block_cap();
+    test_critical_extension_recognition();
     puts("uvarint random round trips: 10000 PASS");
     puts("extension block random round trips: 2000 PASS");
     puts("canonicality/length/criticality exposure: PASS");

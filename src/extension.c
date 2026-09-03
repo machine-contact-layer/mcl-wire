@@ -278,6 +278,21 @@ mcl_wire_status_t mcl_wire_tier0_decode_ext(
     mcl_wire_extension_reader_t *reader,
     size_t *consumed)
 {
+    /* No predicate means no id is understood, so every critical extension is
+     * unknown and refused. */
+    return mcl_wire_tier0_decode_ext_known(data, data_size, object, reader,
+                                           NULL, NULL, consumed);
+}
+
+mcl_wire_status_t mcl_wire_tier0_decode_ext_known(
+    const uint8_t *data,
+    size_t data_size,
+    mcl_wire_tier0_t *object,
+    mcl_wire_extension_reader_t *reader,
+    mcl_wire_extension_known_fn known,
+    void *user,
+    size_t *consumed)
+{
     mcl_wire_header_t header;
     mcl_wire_extension_reader_t scan;
     mcl_wire_extension_t extension;
@@ -333,12 +348,17 @@ mcl_wire_status_t mcl_wire_tier0_decode_ext(
         }
         if (extension.critical != 0u) {
             /*
-             * No extension id is registered, so every critical extension is
-             * unknown to this implementation and the object must be refused.
-             * An id becomes known by being registered and implemented, not by
-             * being tolerated here.
+             * The caller decides what it understands. Without a predicate it
+             * understands nothing, so every critical extension is unknown and
+             * the object is refused -- the sender said it must not be acted on
+             * without this, and skipping it would turn that into a suggestion.
+             *
+             * Non-critical extensions never reach here: an unknown one is
+             * skipped by definition and stays readable through the reader.
              */
-            return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;
+            if (known == NULL || known(user, extension.id) == 0u) {
+                return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;
+            }
         }
     }
 
