@@ -149,6 +149,74 @@ static mcl_wire_status_t mcl_require_zero_padding(mcl_bit_reader_t *reader)
     return MCL_WIRE_OK;
 }
 
+/* ---------- duration codes ---------- */
+
+uint32_t mcl_wire_duration_seconds(uint8_t code)
+{
+    const uint32_t exponent = (uint32_t)(code >> 4);
+    const uint32_t mantissa = (uint32_t)(code & 0x0Fu);
+
+    if (exponent == 0u) {
+        return mantissa;
+    }
+    /* The implied leading one is what makes this injective. */
+    return (16u + mantissa) << (exponent - 1u);
+}
+
+mcl_wire_status_t mcl_wire_duration_encode(uint32_t seconds, uint8_t *code)
+{
+    uint32_t exponent;
+
+    if (code == NULL) {
+        return MCL_WIRE_ERR_INVALID_ARGUMENT;
+    }
+    if (seconds > MCL_WIRE_DURATION_MAX_SECONDS) {
+        /* Refused, not clamped. See the note in wire.h. */
+        return MCL_WIRE_ERR_RANGE;
+    }
+
+    if (seconds < 16u) {
+        *code = (uint8_t)seconds;
+        return MCL_WIRE_OK;
+    }
+
+    /*
+     * Find the band this duration falls in, then take the mantissa by shifting
+     * rather than dividing: the same integer arithmetic runs on a Cortex-M0,
+     * which has no divide instruction.
+     *
+     * THE BANDS DO NOT TOUCH. Band `e` covers 16<<(e-1) .. 31<<(e-1), so
+     * between one band's top and the next band's bottom there is a gap of one
+     * step -- 253952 s and 262144 s are both representable and nothing between
+     * them is. A duration landing in a gap must round down to the top of the
+     * band below, which is the largest representable value at or below it.
+     *
+     * Selecting the band by "first top not below seconds" alone lands in the
+     * band ABOVE the gap and then underflows the mantissa subtraction, which
+     * turned four days into six.
+     */
+    for (exponent = 1u; exponent < 16u; ++exponent) {
+        const uint32_t shift = exponent - 1u;
+        const uint32_t band_bottom = 16u << shift;
+        const uint32_t band_top = 31u << shift;
+
+        if (seconds < band_bottom) {
+            /* In the gap below this band. The band below is full, so its top
+             * is the closest representable value at or below `seconds`. */
+            *code = (uint8_t)(((exponent - 1u) << 4) | 0x0Fu);
+            return MCL_WIRE_OK;
+        }
+        if (seconds <= band_top) {
+            const uint32_t mantissa = (seconds >> shift) - 16u;
+            *code = (uint8_t)((exponent << 4) | (mantissa & 0x0Fu));
+            return MCL_WIRE_OK;
+        }
+    }
+
+    /* Unreachable: the range check above bounds `seconds` to the last band. */
+    return MCL_WIRE_ERR_RANGE;
+}
+
 mcl_wire_status_t mcl_wire_header_encode(
     const mcl_wire_header_t *header,
     uint8_t out[MCL_WIRE_COMMON_HEADER_SIZE])

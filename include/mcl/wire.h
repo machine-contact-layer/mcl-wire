@@ -137,6 +137,65 @@ typedef struct {
     } body;
 } mcl_wire_tier0_t;
 
+/* ============================================================
+ * DURATION CODES
+ *
+ * `ttl` and `validity` are both 8-bit duration fields, and both had no unit and
+ * no scale: eight bits meaning "some duration". A receiver was forbidden to
+ * infer seconds, which made them undecidable rather than merely imprecise.
+ *
+ * ONE ENCODING, USED BY BOTH. Two duration fields with different scales in one
+ * protocol is a defect waiting to be written.
+ *
+ * Layout: a 4-bit exponent in the high nibble, a 4-bit mantissa in the low.
+ *
+ *     e == 0   seconds = m                      0..15, in 1 s steps
+ *     e >= 1   seconds = (16 + m) << (e - 1)    16..507904
+ *
+ * The implied leading one above e == 0 is what makes the mapping INJECTIVE:
+ * every representable duration has exactly one code, so a decoder never has two
+ * answers and an encoder never has two choices. A plain `m << e` would encode
+ * 64 seconds five different ways, and canonical form is not optional here.
+ *
+ * The range runs to 507904 s, a little under six days, and quantization costs
+ * at most 5.88% of a requested duration above one minute -- measured across the
+ * whole range, not estimated. Both ends matter: a field that cannot express
+ * "for the rest of the shift" gets worked around, and a work-around is a second
+ * scale.
+ *
+ * The bands do not touch. Band `e` covers 16<<(e-1) .. 31<<(e-1), so between
+ * one band's top and the next band's bottom sits a gap of one step; 253952 and
+ * 262144 are both representable and nothing between them is. A duration landing
+ * in a gap rounds down to the band below.
+ *
+ * THERE IS NO CODE FOR "FOREVER", deliberately. An unbounded lifetime is the
+ * opposite of what a TTL is for, and a sentinel meaning it would be reached for
+ * by every sender that did not want to think about expiry.
+ *
+ * Zero is a real value meaning zero seconds: decode the object, then stop
+ * treating it as current. It does not mean "unset".
+ * ============================================================ */
+
+#define MCL_WIRE_DURATION_MAX_SECONDS 507904u
+
+/* Seconds named by a duration code. All 256 codes are valid, so this is total
+ * and needs no status. */
+uint32_t mcl_wire_duration_seconds(uint8_t code);
+
+/*
+ * The code for a duration, ROUNDED DOWN to the nearest representable value.
+ *
+ * Down, never up and never nearest. These fields bound how long a receiver may
+ * keep treating something as current, so rounding up would extend the life of
+ * stale information by up to one quantum every time it was re-encoded. Rounding
+ * down can only shorten a bound, which is the safe direction.
+ *
+ * A duration above MCL_WIRE_DURATION_MAX_SECONDS is REFUSED with
+ * MCL_WIRE_ERR_RANGE rather than clamped. Silently turning thirty days into six
+ * is the kind of rounding that gets discovered in the field.
+ */
+mcl_wire_status_t mcl_wire_duration_encode(uint32_t seconds, uint8_t *code);
+
 mcl_wire_status_t mcl_wire_header_encode(const mcl_wire_header_t *header, uint8_t out[MCL_WIRE_COMMON_HEADER_SIZE]);
 mcl_wire_status_t mcl_wire_header_decode(const uint8_t in[MCL_WIRE_COMMON_HEADER_SIZE], mcl_wire_header_t *header);
 
