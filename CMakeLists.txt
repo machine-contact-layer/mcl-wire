@@ -40,6 +40,20 @@ if(MCL_WIRE_BUILD_TESTS)
     add_test(NAME mcl_wire_extension_vectors
         COMMAND mcl_wire_validate_extension_vectors
         "${CMAKE_CURRENT_SOURCE_DIR}/conformance/vectors/extensions-v0.1.json")
+
+    # spec/tier0-layout-v0.2.md is the authoritative statement of the seven
+    # Tier-0 body layouts, written so a second implementation can be built
+    # without reading this source. A layout document that is WRONG is worse
+    # than none: the implementer builds to it, the bytes disagree, and the
+    # disagreement gets blamed on whichever side is younger. This transcribes
+    # its table as data and checks it against the codec in both directions.
+    add_executable(mcl_wire_validate_tier0_layout tools/validate_tier0_layout.c)
+    target_link_libraries(mcl_wire_validate_tier0_layout PRIVATE mcl_wire)
+    set_target_properties(mcl_wire_validate_tier0_layout PROPERTIES
+        C_STANDARD 99
+        C_STANDARD_REQUIRED YES
+        C_EXTENSIONS NO)
+    add_test(NAME mcl_wire_tier0_layout COMMAND mcl_wire_validate_tier0_layout)
 endif()
 
 if(MCL_WIRE_BUILD_BENCHMARKS)

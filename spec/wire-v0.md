@@ -53,8 +53,28 @@ WireObject {
 }
 ```
 
-Exact bit assignments remain experimental until the scenario corpus and benchmark suite are frozen. The implemented header is specified in
-[`common-header-v0.2.md`](common-header-v0.2.md).
+The implemented header is specified in
+[`common-header-v0.2.md`](common-header-v0.2.md), and the seven implemented
+Tier-0 object bodies are specified, bit for bit, in
+[`tier0-layout-v0.2.md`](tier0-layout-v0.2.md).
+
+Those two documents together are **authoritative and sufficient** to build a
+second implementation of the current wire format without reading the reference
+C. Until `tier0-layout-v0.2.md` existed, this section said only that the body
+assignments were experimental, which left an independent implementer with
+nothing to work from but the reference source and the vectors — inverting the
+project's own rule that the specification is authoritative and the
+implementation subordinate.
+
+**What is authoritative is the LAYOUT, not every field's MEANING.** Sixteen of
+the twenty-one Tier-0 fields carry values on which two independent
+implementations would not agree, because no registry assigns them; the
+coordinate fields have no defined frame of reference at all. That is recorded
+field by field in
+[`mcl-core/registries/tier0-fields-v0.1.json`](../../mcl-core/registries/tier0-fields-v0.1.json)
+and summarised in `tier0-layout-v0.2.md` §7. Bit-perfect decoding without shared
+meaning is not interoperability, and the gap is stated rather than left to be
+discovered.
 
 **Two fields were removed from this sketch rather than implemented, and the
 reasons are load-bearing.**
