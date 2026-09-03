@@ -278,18 +278,18 @@ mcl_wire_status_t mcl_wire_tier0_decode_ext(
     mcl_wire_extension_reader_t *reader,
     size_t *consumed)
 {
-    /* No predicate means no id is understood, so every critical extension is
-     * unknown and refused. */
-    return mcl_wire_tier0_decode_ext_known(data, data_size, object, reader,
-                                           NULL, NULL, consumed);
+    /* No callback means nothing is accepted, so every critical extension is
+     * refused. */
+    return mcl_wire_tier0_decode_ext_accept(data, data_size, object, reader,
+                                            NULL, NULL, consumed);
 }
 
-mcl_wire_status_t mcl_wire_tier0_decode_ext_known(
+mcl_wire_status_t mcl_wire_tier0_decode_ext_accept(
     const uint8_t *data,
     size_t data_size,
     mcl_wire_tier0_t *object,
     mcl_wire_extension_reader_t *reader,
-    mcl_wire_extension_known_fn known,
+    mcl_wire_extension_accept_fn accept,
     void *user,
     size_t *consumed)
 {
@@ -348,15 +348,19 @@ mcl_wire_status_t mcl_wire_tier0_decode_ext_known(
         }
         if (extension.critical != 0u) {
             /*
-             * The caller decides what it understands. Without a predicate it
-             * understands nothing, so every critical extension is unknown and
-             * the object is refused -- the sender said it must not be acted on
-             * without this, and skipping it would turn that into a suggestion.
+             * The caller decides what it accepts, and it sees the VALUE, not
+             * just the id. CRITICAL means "do not act on this object unless you
+             * understand this extension", and understanding one means
+             * understanding its contents. Without a callback nothing is
+             * accepted and the object is refused -- skipping it would turn the
+             * sender's requirement into a suggestion.
              *
              * Non-critical extensions never reach here: an unknown one is
              * skipped by definition and stays readable through the reader.
              */
-            if (known == NULL || known(user, extension.id) == 0u) {
+            if (accept == NULL ||
+                accept(user, extension.id, extension.value,
+                       extension.value_size) == 0u) {
                 return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;
             }
         }

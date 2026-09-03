@@ -489,12 +489,29 @@ static void test_extension_block_cap(void)
  */
 static uint32_t g_known_id;
 static unsigned g_known_calls;
+static uint8_t g_required_value;
+static size_t g_seen_value_size;
 
-static uint8_t knows_one_id(void *user, uint32_t extension_id)
+static uint8_t knows_one_id(void *user, uint32_t extension_id,
+                            const uint8_t *value, size_t value_size)
 {
     (void)user;
     ++g_known_calls;
-    return (extension_id == g_known_id) ? 1u : 0u;
+    g_seen_value_size = value_size;
+    if (extension_id != g_known_id) {
+        return 0u;
+    }
+    /*
+     * The callback sees the VALUE, not just the id. CRITICAL means the object
+     * must not be acted on unless this extension is understood, and
+     * understanding one means understanding its contents -- an id-only
+     * predicate would return OK for a critical extension whose value the caller
+     * cannot use.
+     */
+    if (value == NULL || value_size != 1u) {
+        return 0u;
+    }
+    return (value[0] == g_required_value) ? 1u : 0u;
 }
 
 static void test_critical_extension_recognition(void)
@@ -518,27 +535,45 @@ static void test_critical_extension_recognition(void)
                                            sizeof(buffer), &written),
                  MCL_WIRE_OK);
 
-    /* Understood: the object decodes. */
+    /* Understood, and the value accepted: the object decodes. */
     g_known_id = 17u;
+    g_required_value = 0x77u;
     g_known_calls = 0u;
-    CHECK_STATUS(mcl_wire_tier0_decode_ext_known(buffer, written, &decoded,
-                                                 &reader, knows_one_id, NULL,
-                                                 &consumed), MCL_WIRE_OK);
+    g_seen_value_size = 99u;
+    CHECK_STATUS(mcl_wire_tier0_decode_ext_accept(buffer, written, &decoded,
+                                                  &reader, knows_one_id, NULL,
+                                                  &consumed), MCL_WIRE_OK);
     CHECK_TRUE(consumed == written);
     CHECK_TRUE(g_known_calls == 1u);
+    /* The callback saw the value, not just the id. */
+    CHECK_TRUE(g_seen_value_size == sizeof(value));
+
+    /*
+     * The id is implemented and the VALUE is refused. This is the case an
+     * id-only predicate could not express: it would have returned
+     * MCL_WIRE_OK for an object the caller must not act on, and nothing in the
+     * status would have said so. Now the refusal reaches the caller as the
+     * object being undecodable, which is what CRITICAL means.
+     */
+    g_required_value = 0x78u;
+    CHECK_STATUS(mcl_wire_tier0_decode_ext_accept(buffer, written, &decoded,
+                                                  &reader, knows_one_id, NULL,
+                                                  &consumed),
+                 MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC);
+    g_required_value = 0x77u;
 
     /* Not understood: the whole object is refused. */
     g_known_id = 18u;
-    CHECK_STATUS(mcl_wire_tier0_decode_ext_known(buffer, written, &decoded,
-                                                 &reader, knows_one_id, NULL,
-                                                 &consumed),
+    CHECK_STATUS(mcl_wire_tier0_decode_ext_accept(buffer, written, &decoded,
+                                                  &reader, knows_one_id, NULL,
+                                                  &consumed),
                  MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC);
 
     /* No predicate means nothing is understood, which is what the plain
      * extension decoder does. */
-    CHECK_STATUS(mcl_wire_tier0_decode_ext_known(buffer, written, &decoded,
-                                                 &reader, NULL, NULL,
-                                                 &consumed),
+    CHECK_STATUS(mcl_wire_tier0_decode_ext_accept(buffer, written, &decoded,
+                                                  &reader, NULL, NULL,
+                                                  &consumed),
                  MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC);
     CHECK_STATUS(mcl_wire_tier0_decode_ext(buffer, written, &decoded, &reader,
                                            &consumed),
@@ -552,9 +587,9 @@ static void test_critical_extension_recognition(void)
                  MCL_WIRE_OK);
     g_known_id = 99u;
     g_known_calls = 0u;
-    CHECK_STATUS(mcl_wire_tier0_decode_ext_known(buffer, written, &decoded,
-                                                 &reader, knows_one_id, NULL,
-                                                 &consumed), MCL_WIRE_OK);
+    CHECK_STATUS(mcl_wire_tier0_decode_ext_accept(buffer, written, &decoded,
+                                                  &reader, knows_one_id, NULL,
+                                                  &consumed), MCL_WIRE_OK);
     CHECK_TRUE(g_known_calls == 0u);
 
     /*
@@ -575,9 +610,9 @@ static void test_critical_extension_recognition(void)
                                            sizeof(buffer), &written),
                  MCL_WIRE_OK);
     g_known_id = 17u;
-    CHECK_STATUS(mcl_wire_tier0_decode_ext_known(buffer, written, &decoded,
-                                                 &reader, knows_one_id, NULL,
-                                                 &consumed),
+    CHECK_STATUS(mcl_wire_tier0_decode_ext_accept(buffer, written, &decoded,
+                                                  &reader, knows_one_id, NULL,
+                                                  &consumed),
                  MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC);
 }
 
