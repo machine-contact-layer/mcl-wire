@@ -3,9 +3,13 @@
   "wire_header": "v0.2 category/opcode candidate",
   "wire_major": 0,
   "notes": [
-    "These vectors exercise the six currently measured Tier-0 layouts through the freestanding C99 reference codec.",
+    "These vectors exercise the seven currently measured Tier-0 layouts through the freestanding C99 reference codec.",
     "The historical tier0-v0.1.json vectors remain unchanged.",
-    "TRANSPORT_OFFER uses the 8-bit transport identifier direction from field-width-review-v0.2.md."
+    "TRANSPORT_OFFER uses the 8-bit transport identifier direction from field-width-review-v0.2.md.",
+    "TRANSPORT_ACCEPT was added after TRANSPORT_OFFER. Without it an offering peer never learns which transport was selected, so two independent implementations cannot complete a migration. Its assignment (category 8, opcode 1) already existed in semantic-codes-v0.2.json; only the layout is new.",
+    "transport_id values are defined by mcl-link/registries/transport-ids-v0.1.json: 1 MCL_AP, 2 MCL_IP, 3 MCL_BLE, 4 MCL_UWB. Both transport vectors here use 2, which is MCL_IP.",
+    "PROVENANCE WARNING: the TRANSPORT_OFFER field values (source_ref, endpoint_token) were borrowed from research corpus scenario S14, which describes a BLE handoff, while the encoded transport_id is 2 = MCL_IP. The bytes are correct and self-consistent; the borrowed values are not evidence that 2 means BLE. Do not infer transport assignments from vector provenance - the registry is authoritative.",
+    "session_ref in TRANSPORT_ACCEPT is a correlation reference carried in the clear. It is not a secret and proves nothing about the peer."
   ],
   "vectors": [
     {"name":"PRESENCE","length":11,"hex":"0002aa0000010100001f79"},
@@ -13,6 +17,7 @@
     {"name":"REQUEST","length":17,"hex":"050ca100000102b1000002010000030e40"},
     {"name":"AUTHORITY_CLAIM","length":14,"hex":"010ca30000010459003c28c06fc0"},
     {"name":"DEGRADED_STATE","length":10,"hex":"060cac0000010296e4c0"},
-    {"name":"TRANSPORT_OFFER","length":13,"hex":"0802ae0000010201d00d00019f"}
+    {"name":"TRANSPORT_OFFER","length":13,"hex":"0802ae0000010201d00d00019f"},
+    {"name":"TRANSPORT_ACCEPT","length":12,"hex":"080ab000000202015e5510c7"}
   ]
 }

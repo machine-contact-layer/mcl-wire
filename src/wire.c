@@ -217,6 +217,10 @@ static void mcl_kind_to_code(
         *category = 8u;
         *opcode = 0u;
         break;
+    case MCL_WIRE_KIND_TRANSPORT_ACCEPT:
+        *category = 8u;
+        *opcode = 1u;
+        break;
     default:
         *category = 0xffu;
         *opcode = 0xffu;
@@ -245,6 +249,8 @@ static mcl_wire_status_t mcl_code_to_kind(
         *kind = MCL_WIRE_KIND_DEGRADED_STATE;
     } else if (category == 8u && opcode == 0u) {
         *kind = MCL_WIRE_KIND_TRANSPORT_OFFER;
+    } else if (category == 8u && opcode == 1u) {
+        *kind = MCL_WIRE_KIND_TRANSPORT_ACCEPT;
     } else {
         return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;
     }
@@ -267,6 +273,9 @@ size_t mcl_wire_tier0_encoded_size(mcl_wire_kind_t kind)
         return 10u;
     case MCL_WIRE_KIND_TRANSPORT_OFFER:
         return 13u;
+    case MCL_WIRE_KIND_TRANSPORT_ACCEPT:
+        /* header 2 + source_ref 4 + transport 1 + profile 1 + session_ref 4. */
+        return 12u;
     default:
         return 0u;
     }
@@ -364,6 +373,11 @@ mcl_wire_status_t mcl_wire_tier0_encode(
         MCL_TRY(mcl_write_u(&writer, object->body.transport_offer.profile_id, 8u));
         MCL_TRY(mcl_write_u(&writer, object->body.transport_offer.endpoint_token, 32u));
         MCL_TRY(mcl_write_u(&writer, object->body.transport_offer.validity, 8u));
+        break;
+    case MCL_WIRE_KIND_TRANSPORT_ACCEPT:
+        MCL_TRY(mcl_write_u(&writer, object->body.transport_accept.transport_id, 8u));
+        MCL_TRY(mcl_write_u(&writer, object->body.transport_accept.profile_id, 8u));
+        MCL_TRY(mcl_write_u(&writer, object->body.transport_accept.session_ref, 32u));
         break;
     default:
         return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;
@@ -482,6 +496,13 @@ mcl_wire_status_t mcl_wire_tier0_decode(
         MCL_TRY(mcl_read_u(&reader, 32u, &object->body.transport_offer.endpoint_token));
         MCL_TRY(mcl_read_u(&reader, 8u, &unsigned_value));
         object->body.transport_offer.validity = (uint8_t)unsigned_value;
+        break;
+    case MCL_WIRE_KIND_TRANSPORT_ACCEPT:
+        MCL_TRY(mcl_read_u(&reader, 8u, &unsigned_value));
+        object->body.transport_accept.transport_id = (uint8_t)unsigned_value;
+        MCL_TRY(mcl_read_u(&reader, 8u, &unsigned_value));
+        object->body.transport_accept.profile_id = (uint8_t)unsigned_value;
+        MCL_TRY(mcl_read_u(&reader, 32u, &object->body.transport_accept.session_ref));
         break;
     default:
         return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;

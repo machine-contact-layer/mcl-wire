@@ -35,6 +35,7 @@ static const uint8_t request_bytes[] = {0x05u,0x0cu,0xa1u,0x00u,0x00u,0x01u,0x02
 static const uint8_t authority_bytes[] = {0x01u,0x0cu,0xa3u,0x00u,0x00u,0x01u,0x04u,0x59u,0x00u,0x3cu,0x28u,0xc0u,0x6fu,0xc0u};
 static const uint8_t degraded_bytes[] = {0x06u,0x0cu,0xacu,0x00u,0x00u,0x01u,0x02u,0x96u,0xe4u,0xc0u};
 static const uint8_t transport_bytes[] = {0x08u,0x02u,0xaeu,0x00u,0x00u,0x01u,0x02u,0x01u,0xd0u,0x0du,0x00u,0x01u,0x9fu};
+static const uint8_t transport_accept_bytes[] = {0x08u,0x0au,0xb0u,0x00u,0x00u,0x02u,0x02u,0x01u,0x5eu,0x55u,0x10u,0xc7u};
 
 static const vector_t vectors[] = {
     {"PRESENCE", { .kind=MCL_WIRE_KIND_PRESENCE, .priority=1u, .source_ref=UINT32_C(2852126721), .body.presence={1u,UINT32_C(31),121u}}, presence_bytes, sizeof(presence_bytes)},
@@ -42,7 +43,8 @@ static const vector_t vectors[] = {
     {"REQUEST", { .kind=MCL_WIRE_KIND_REQUEST, .priority=2u, .source_ref=UINT32_C(2701131777), .body.request={2u,UINT32_C(2969567234),16,0,12u,57u}}, request_bytes, sizeof(request_bytes)},
     {"AUTHORITY_CLAIM", { .kind=MCL_WIRE_KIND_AUTHORITY_CLAIM, .priority=2u, .source_ref=UINT32_C(2734686209), .body.authority_claim={1u,356u,UINT32_C(15770369),191u}}, authority_bytes, sizeof(authority_bytes)},
     {"DEGRADED_STATE", { .kind=MCL_WIRE_KIND_DEGRADED_STATE, .priority=2u, .source_ref=UINT32_C(2885681153), .body.degraded_state={2u,75u,3u,147u}}, degraded_bytes, sizeof(degraded_bytes)},
-    {"TRANSPORT_OFFER", { .kind=MCL_WIRE_KIND_TRANSPORT_OFFER, .priority=1u, .source_ref=UINT32_C(2919235585), .body.transport_offer={2u,1u,UINT32_C(3490512897),159u}}, transport_bytes, sizeof(transport_bytes)}
+    {"TRANSPORT_OFFER", { .kind=MCL_WIRE_KIND_TRANSPORT_OFFER, .priority=1u, .source_ref=UINT32_C(2919235585), .body.transport_offer={2u,1u,UINT32_C(3490512897),159u}}, transport_bytes, sizeof(transport_bytes)},
+    {"TRANSPORT_ACCEPT", { .kind=MCL_WIRE_KIND_TRANSPORT_ACCEPT, .priority=1u, .source_ref=UINT32_C(0xB0000002), .body.transport_accept={2u,1u,UINT32_C(0x5E5510C7)}}, transport_accept_bytes, sizeof(transport_accept_bytes)}
 };
 
 int main(void)

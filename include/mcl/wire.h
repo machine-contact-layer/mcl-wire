@@ -30,7 +30,8 @@ enum {
     MCL_WIRE_KIND_REQUEST = 2u,
     MCL_WIRE_KIND_AUTHORITY_CLAIM = 3u,
     MCL_WIRE_KIND_DEGRADED_STATE = 4u,
-    MCL_WIRE_KIND_TRANSPORT_OFFER = 5u
+    MCL_WIRE_KIND_TRANSPORT_OFFER = 5u,
+    MCL_WIRE_KIND_TRANSPORT_ACCEPT = 6u
 };
 
 typedef struct {
@@ -88,6 +89,24 @@ typedef struct {
     uint8_t validity;
 } mcl_wire_transport_offer_t;
 
+/*
+ * TRANSPORT_ACCEPT is the other half of a transport change. Without it the
+ * offering peer never learns which transport was selected, so two independent
+ * implementations cannot complete a migration -- which is exactly the test for
+ * whether something belongs in the specification.
+ *
+ * session_ref carries the accepting peer's chosen correlation reference for the
+ * continued contact. It is a CORRELATION REFERENCE AND NOT A SECRET: it travels
+ * in the clear over an observable medium, so anyone in range can read it and
+ * anyone can quote it back. It lets an honest peer recognise a continuing
+ * contact; it establishes nothing whatever about who the peer is.
+ */
+typedef struct {
+    uint8_t transport_id;
+    uint8_t profile_id;
+    uint32_t session_ref;
+} mcl_wire_transport_accept_t;
+
 typedef struct {
     mcl_wire_kind_t kind;
     uint8_t priority;
@@ -99,6 +118,7 @@ typedef struct {
         mcl_wire_authority_claim_t authority_claim;
         mcl_wire_degraded_state_t degraded_state;
         mcl_wire_transport_offer_t transport_offer;
+        mcl_wire_transport_accept_t transport_accept;
     } body;
 } mcl_wire_tier0_t;
 
