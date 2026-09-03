@@ -461,6 +461,39 @@ mcl_wire_status_t mcl_wire_tier0_encode(
     return MCL_WIRE_OK;
 }
 
+/*
+ * V1_SCOPE.md section 4.7. See the contract in wire.h.
+ *
+ * A switch rather than a table so that adding a kind without deciding its major
+ * is a compiler diagnostic under -Wswitch rather than a silent default.
+ */
+int mcl_wire_kind_allowed_at_major(uint8_t major, mcl_wire_kind_t kind)
+{
+    if (major == MCL_WIRE_EXPERIMENTAL_MAJOR) {
+        /* The experimental major carries everything that is implemented. That
+         * is what makes it experimental. */
+        return (kind <= MCL_WIRE_KIND_TRANSPORT_ACCEPT) ? 1 : 0;
+    }
+    if (major == MCL_WIRE_STABLE_MAJOR) {
+        switch (kind) {
+        case MCL_WIRE_KIND_PRESENCE:
+        case MCL_WIRE_KIND_TRANSPORT_OFFER:
+        case MCL_WIRE_KIND_TRANSPORT_ACCEPT:
+            return 1;
+        case MCL_WIRE_KIND_HAZARD:
+        case MCL_WIRE_KIND_REQUEST:
+        case MCL_WIRE_KIND_AUTHORITY_CLAIM:
+        case MCL_WIRE_KIND_DEGRADED_STATE:
+            /* Candidate. Layout frozen-quality, meaning not. */
+            return 0;
+        default:
+            return 0;
+        }
+    }
+    /* Any other major is unassigned. Unknown is refused, never guessed. */
+    return 0;
+}
+
 mcl_wire_status_t mcl_wire_tier0_decode_body(
     const uint8_t *data,
     size_t data_size,
@@ -483,6 +516,14 @@ mcl_wire_status_t mcl_wire_tier0_decode_body(
 
     MCL_TRY(mcl_wire_header_decode(data, &header));
     if (header.major_version != MCL_WIRE_EXPERIMENTAL_MAJOR) {
+        /*
+         * Major 1 is defined (MCL_WIRE_STABLE_MAJOR) but NOT YET CUT, so it is
+         * refused here along with every unassigned major. When it is cut, this
+         * becomes an allowed-major check followed by
+         * mcl_wire_kind_allowed_at_major on the decoded kind -- the rule is
+         * already written and tested so that it cannot be forgotten between now
+         * and the moment major-1 vectors are frozen.
+         */
         return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;
     }
     /*

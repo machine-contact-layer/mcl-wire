@@ -9,6 +9,19 @@ extern "C" {
 #endif
 
 #define MCL_WIRE_EXPERIMENTAL_MAJOR 0u
+
+/*
+ * The first Stable major.
+ *
+ * NOT YET CUT. The decoder still refuses it: cutting major 1 is gated on the
+ * Stable meanings closing (mcl-core/governance/V1_SCOPE.md section 5.8), and
+ * accepting frames under a major whose bodies are not frozen would be the
+ * cutting. What exists now is the RULE that will govern it, defined and tested
+ * before any major-1 vector is generated, because a vector frozen under an
+ * ambiguous rule fixes the ambiguity into the artifacts that define the release.
+ */
+#define MCL_WIRE_STABLE_MAJOR 1u
+
 #define MCL_WIRE_COMMON_HEADER_SIZE 2u
 #define MCL_WIRE_TIER0_MAX_SIZE 17u
 
@@ -33,6 +46,29 @@ enum {
     MCL_WIRE_KIND_TRANSPORT_OFFER = 5u,
     MCL_WIRE_KIND_TRANSPORT_ACCEPT = 6u
 };
+
+/*
+ * A STABLE MAJOR CARRIES ONLY STABLE SEMANTICS.
+ *
+ * V1_SCOPE.md section 4.7. Wire major 1 carries PRESENCE, TRANSPORT_OFFER and
+ * TRANSPORT_ACCEPT and nothing else. HAZARD, REQUEST, AUTHORITY_CLAIM and
+ * DEGRADED_STATE are Candidate -- their layouts exist and their vectors pass,
+ * but their MEANINGS may still change, and a Candidate body carried inside a
+ * frozen major would let two decoders both correctly implementing "major 1"
+ * read one category/opcode under two different layouts. That is the exact
+ * failure a major version exists to prevent.
+ *
+ * Candidate objects therefore stay on the experimental major until they are
+ * separately promoted. The consequence, stated because implementers will meet
+ * it: a node doing first contact and also reporting hazards emits objects of
+ * two different majors. That is permitted -- the major is a per-object header
+ * field, not a per-link property -- but a peer must not infer support for one
+ * major from having seen the other.
+ *
+ * Returns 1 if `kind` may be carried at `major`, 0 otherwise. An unassigned
+ * major answers 0: unknown is refused, never guessed.
+ */
+int mcl_wire_kind_allowed_at_major(uint8_t major, mcl_wire_kind_t kind);
 
 typedef struct {
     uint8_t major_version;

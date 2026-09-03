@@ -16,7 +16,7 @@ set_target_properties(mcl_wire PROPERTIES
 if(MCL_WIRE_BUILD_TESTS)
     enable_testing()
 
-    foreach(test_name IN ITEMS wire extension vectors fuzz_decode duration)
+    foreach(test_name IN ITEMS wire extension vectors fuzz_decode duration major_rule)
         add_executable(mcl_wire_test_${test_name} tests/test_${test_name}.c)
         target_link_libraries(mcl_wire_test_${test_name} PRIVATE mcl_wire)
         set_target_properties(mcl_wire_test_${test_name} PROPERTIES

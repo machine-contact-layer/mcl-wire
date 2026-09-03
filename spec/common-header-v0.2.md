@@ -44,6 +44,50 @@ An incompatible reinterpretation of existing canonical bytes requires a new majo
 
 `major_version = 15` is reserved for future version-space escape if ever required.
 
+### 3.1 A Stable major carries only Stable semantics
+
+**Normative.** `mcl-core/governance/V1_SCOPE.md` §4.7.
+
+> Wire major 1 carries only semantic objects whose body contract is part of the
+> major-1 Stable set: `PRESENCE`, `TRANSPORT_OFFER` and `TRANSPORT_ACCEPT`.
+>
+> A major-1 decoder receiving a category/opcode that is not assigned in the
+> major-1 Stable set **MUST** reject it. It MUST NOT decode the body, and MUST
+> NOT infer a layout from the fact that one exists at another major.
+>
+> `HAZARD`, `REQUEST`, `AUTHORITY_CLAIM` and `DEGRADED_STATE` are Candidate.
+> They continue to be carried under the experimental major until they are
+> separately promoted.
+
+**Why.** Those four objects have layouts, codes, vectors and passing tests —
+and they are Candidate precisely so that their *meanings* may still change. If
+one changed while being carried inside major 1, two decoders both correctly
+implementing "major 1" would read the same category/opcode under different
+layouts. A major version exists to make exactly that impossible, so a Candidate
+body inside a frozen major contradicts the guarantee the major provides.
+
+**Rejected alternative.** Carrying Candidate objects inside major 1 under a
+code range documented as unstable. It makes the major version insufficient to
+determine whether a layout can be trusted — a decoder would have to consult a
+range table to learn what its own version guarantees. MCL already draws this
+line for extension IDs, where Experimental Use values are explicitly not
+globally interoperable assignments.
+
+**Consequence, stated because implementers will meet it.** A node that performs
+first contact under major 1 and also reports hazards emits objects of two
+different majors. This is permitted: `major_version` is a per-object header
+field, not a per-link property. What a peer **MUST NOT** do is infer support for
+one major from having observed the other.
+
+**Status.** Major 1 is defined (`MCL_WIRE_STABLE_MAJOR`) and **not yet cut**.
+The decoder refuses it along with every unassigned major, because accepting
+frames under a major whose bodies are not frozen would be the cutting, and that
+is gated on the Stable meanings closing (`V1_SCOPE.md` §5.8). The rule is
+written and tested now — `mcl_wire_kind_allowed_at_major`,
+`mcl-wire/tests/test_major_rule.c` — so that it exists before the first major-1
+vector is generated. A vector frozen under an ambiguous rule fixes the ambiguity
+into the artifacts that define the release.
+
 ## 4. Category/opcode separation
 
 Category identifies the semantic family.
