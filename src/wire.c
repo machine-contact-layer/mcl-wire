@@ -326,10 +326,42 @@ static mcl_wire_status_t mcl_code_to_kind(
     return MCL_WIRE_OK;
 }
 
+size_t mcl_wire_tier0_encoded_size_at_major(uint8_t major, mcl_wire_kind_t kind)
+{
+    if (mcl_wire_kind_allowed_at_major(major, kind) == 0) {
+        return 0u;
+    }
+    if (major == MCL_WIRE_STABLE_MAJOR && kind == MCL_WIRE_KIND_PRESENCE) {
+        /*
+         * Major-1 PRESENCE drops machine_class: 11 bytes become 10.
+         *
+         * A necessity audit found no consumer of the field anywhere in the
+         * eight repositories -- every reference was a constant write, codec
+         * plumbing, or a round-trip assert -- and the research corpus offered
+         * two distinct values, which is no basis for a 256-value cross-vendor
+         * taxonomy. See mcl-core/governance/MACHINE_CLASS_AUDIT.md.
+         *
+         * The reasoning is the coordinate decision applied consistently
+         * (V1_SCOPE section 4.1): a Stable field nobody may act on is an
+         * invitation to act on it, and a machine_class with no assigned values
+         * is exactly that. No replacement taxonomy is invented; machine typing
+         * moves to capability metadata exchanged after contact, where a
+         * vocabulary can be domain-scoped instead of universal and frozen.
+         *
+         * Major 0 keeps its 11-byte layout permanently. Its vectors and its
+         * over-air evidence are not touched.
+         */
+        return 10u;
+    }
+    return mcl_wire_tier0_encoded_size(kind);
+}
+
 size_t mcl_wire_tier0_encoded_size(mcl_wire_kind_t kind)
 {
     switch (kind) {
     case MCL_WIRE_KIND_PRESENCE:
+        /* The experimental-major layout. Major 1 drops machine_class; see
+         * mcl_wire_tier0_encoded_size_at_major. */
         return 11u;
     case MCL_WIRE_KIND_HAZARD:
         return 15u;

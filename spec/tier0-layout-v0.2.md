@@ -116,6 +116,11 @@ and the 32-bit `source_ref`.
 
 ### 4.1 PRESENCE — category 0, opcode 0
 
+**PRESENCE has two layouts. They differ by one field, and the major says
+which.**
+
+**Major 0 (experimental) — 11 bytes. Frozen as history; never changes.**
+
 ```
 offset  width  signed  field
 ------  -----  ------  --------------------------------------
@@ -126,6 +131,43 @@ offset  width  signed  field
     80      8       u  ttl
                        total 88 bits = 11 bytes, no padding
 ```
+
+**Major 1 (Stable) — 10 bytes. `machine_class` is removed.**
+
+```
+offset  width  signed  field
+------  -----  ------  --------------------------------------
+     0     16       -  common header
+    16     32       u  source_ref
+    48     24       u  capability_tag
+    72      8       u  ttl
+                       total 80 bits = 10 bytes, no padding
+```
+
+**Why `machine_class` is not in the Stable layout.** A necessity audit
+(`mcl-core/governance/MACHINE_CLASS_AUDIT.md`) asked what Stable-v1 decision
+becomes impossible without it and found none: no code in any of the eight
+repositories dispatches, filters or negotiates on the value — every one of its
+21 references is a constant write, codec plumbing, or a round-trip assert, using
+five different constants with no shared meaning because none exists. The
+research corpus contains three `PRESENCE` messages carrying two distinct
+classes, which is no basis for a 256-value cross-vendor taxonomy, and both
+specifications that mentioned the field already marked it optional.
+
+This is §4.1 of the v1 scope applied consistently: *a Stable field nobody may
+act on is an invitation to act on it.* A `machine_class` with no assigned values
+is exactly that field — a receiver learns the sender considers itself class 7
+and has no way to look 7 up.
+
+**No replacement taxonomy is defined.** Machine typing belongs to capability
+metadata exchanged after contact, where a vocabulary can be domain-scoped and
+versioned rather than universal and frozen into a first-contact object. An
+implementation needing it before capability exchange must show the requirement
+first; none exists in the tree.
+
+**Major 0 is untouched.** Its layout, its published vectors and the E3/E4
+over-air evidence recorded against it all stand exactly as they are. Nothing
+here rewrites history to make the new decision look like it was always true.
 
 ### 4.2 HAZARD — category 3, opcode 1
 

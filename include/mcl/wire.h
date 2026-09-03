@@ -274,6 +274,23 @@ mcl_wire_status_t mcl_wire_header_decode(const uint8_t in[MCL_WIRE_COMMON_HEADER
 
 size_t mcl_wire_tier0_encoded_size(mcl_wire_kind_t kind);
 
+/*
+ * Encoded size of `kind` as carried at `major`. Returns 0 when that major does
+ * not carry that kind at all.
+ *
+ * The two majors do NOT agree about PRESENCE. Major 1 drops machine_class, so
+ * a major-1 PRESENCE is 10 bytes where a major-0 PRESENCE is 11. That is the
+ * whole reason this function exists: a size derived from the kind alone was
+ * correct while only one major existed and silently stops being correct the
+ * moment a second one does.
+ *
+ * Decided from evidence, not preference -- mcl-core/governance/
+ * MACHINE_CLASS_AUDIT.md found no consumer of machine_class in any of the eight
+ * repositories and a research corpus containing two distinct values. Major 0
+ * keeps its layout, its vectors and its evidence unchanged and permanently.
+ */
+size_t mcl_wire_tier0_encoded_size_at_major(uint8_t major, mcl_wire_kind_t kind);
+
 mcl_wire_status_t mcl_wire_tier0_encode(
     const mcl_wire_tier0_t *object,
     uint8_t *out,

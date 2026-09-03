@@ -160,6 +160,50 @@ static void test_stable_major_is_not_yet_accepted_on_the_wire(void)
           "the rule and the decoder disagree only about timing");
 }
 
+/*
+ * The two majors do not agree about PRESENCE, and that disagreement is the
+ * point: major 1 drops machine_class on the evidence in MACHINE_CLASS_AUDIT.md.
+ */
+static void test_major_1_presence_drops_machine_class(void)
+{
+    unsigned k;
+
+    printf("[TEST] major-1 PRESENCE is 10 bytes; major-0 stays 11\n");
+
+    CHECK(mcl_wire_tier0_encoded_size(MCL_WIRE_KIND_PRESENCE) == 11u,
+          "major 0 keeps its 11-byte PRESENCE, permanently");
+    CHECK(mcl_wire_tier0_encoded_size_at_major(
+              MCL_WIRE_EXPERIMENTAL_MAJOR, MCL_WIRE_KIND_PRESENCE) == 11u,
+          "and the major-aware size agrees for major 0");
+    CHECK(mcl_wire_tier0_encoded_size_at_major(
+              MCL_WIRE_STABLE_MAJOR, MCL_WIRE_KIND_PRESENCE) == 10u,
+          "major 1 drops machine_class: exactly one byte smaller");
+
+    /* The other two Stable objects are unchanged, so the difference is
+     * specific to the field that was removed rather than a general shift. */
+    CHECK(mcl_wire_tier0_encoded_size_at_major(
+              MCL_WIRE_STABLE_MAJOR, MCL_WIRE_KIND_TRANSPORT_OFFER) ==
+          mcl_wire_tier0_encoded_size(MCL_WIRE_KIND_TRANSPORT_OFFER),
+          "TRANSPORT_OFFER is the same size at both majors");
+    CHECK(mcl_wire_tier0_encoded_size_at_major(
+              MCL_WIRE_STABLE_MAJOR, MCL_WIRE_KIND_TRANSPORT_ACCEPT) ==
+          mcl_wire_tier0_encoded_size(MCL_WIRE_KIND_TRANSPORT_ACCEPT),
+          "TRANSPORT_ACCEPT is the same size at both majors");
+
+    /* A Candidate object has no size at the Stable major, because it is not
+     * carried there at all. */
+    CHECK(mcl_wire_tier0_encoded_size_at_major(
+              MCL_WIRE_STABLE_MAJOR, MCL_WIRE_KIND_HAZARD) == 0u,
+          "a Candidate object has no major-1 size");
+
+    /* Every unassigned major carries nothing, so every size there is zero. */
+    for (k = 2u; k <= 15u; ++k) {
+        CHECK(mcl_wire_tier0_encoded_size_at_major(
+                  (uint8_t)k, MCL_WIRE_KIND_PRESENCE) == 0u,
+              "an unassigned major has no sizes");
+    }
+}
+
 int main(void)
 {
     printf("=== MCL Wire: a Stable major carries only Stable semantics ===\n");
@@ -170,6 +214,7 @@ int main(void)
     test_unassigned_majors_are_refused();
     test_unknown_kind_refused_at_every_major();
     test_stable_major_is_not_yet_accepted_on_the_wire();
+    test_major_1_presence_drops_machine_class();
 
     printf("\n%d checks, 0 failed.\n", g_checks);
     return 0;
