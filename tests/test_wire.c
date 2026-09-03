@@ -91,7 +91,7 @@ static void mcl_test_fill(mcl_wire_tier0_t *object, mcl_wire_kind_t kind)
     switch (kind) {
     case MCL_WIRE_KIND_PRESENCE:
         object->body.presence.machine_class = (uint8_t)mcl_test_random();
-        object->body.presence.capability_digest = mcl_test_random() & 0x00ffffffu;
+        object->body.presence.capability_tag = mcl_test_random() & 0x00ffffffu;
         object->body.presence.ttl = (uint8_t)mcl_test_random();
         break;
     case MCL_WIRE_KIND_HAZARD:

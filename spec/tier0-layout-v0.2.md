@@ -122,7 +122,7 @@ offset  width  signed  field
      0     16       -  common header
     16     32       u  source_ref
     48      8       u  machine_class
-    56     24       u  capability_digest
+    56     24       u  capability_tag
     80      8       u  ttl
                        total 88 bits = 11 bytes, no padding
 ```

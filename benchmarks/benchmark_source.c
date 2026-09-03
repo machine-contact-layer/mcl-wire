@@ -29,7 +29,7 @@ typedef struct {
 
 static const field_info_t field_info[] = {
     {"type",1u,0u},{"priority",2u,0u},{"source_ref",3u,0u},
-    {"machine_class",4u,0u},{"capability_digest",5u,0u},{"ttl",6u,0u},
+    {"machine_class",4u,0u},{"capability_tag",5u,0u},{"ttl",6u,0u},
     {"hazard_class",7u,0u},{"severity",8u,0u},{"confidence",9u,0u},
     {"x",10u,1u},{"y",11u,1u},{"z",12u,1u},{"radius",13u,0u},
     {"request_class",14u,0u},{"target_ref",15u,0u},
@@ -242,7 +242,7 @@ static void populate_object(const bench_event_t *event, mcl_wire_tier0_t *object
     switch (object->kind) {
     case MCL_WIRE_KIND_PRESENCE:
         object->body.presence.machine_class=(uint8_t)require_value(event,"machine_class");
-        object->body.presence.capability_digest=(uint32_t)require_value(event,"capability_digest");
+        object->body.presence.capability_tag=(uint32_t)require_value(event,"capability_tag");
         object->body.presence.ttl=(uint8_t)require_value(event,"ttl");
         break;
     case MCL_WIRE_KIND_HAZARD:
@@ -346,8 +346,8 @@ int main(int argc, char **argv)
     }
 
     BENCH_REQUIRE(case_count==41u);
-    BENCH_REQUIRE(json_total==UINT64_C(5008));
-    BENCH_REQUIRE(cbor_string_total==UINT64_C(3594));
+    BENCH_REQUIRE(json_total==UINT64_C(4999));
+    BENCH_REQUIRE(cbor_string_total==UINT64_C(3585));
     BENCH_REQUIRE(cbor_integer_total==UINT64_C(1085));
     BENCH_REQUIRE(protobuf_total==UINT64_C(922));
         /*

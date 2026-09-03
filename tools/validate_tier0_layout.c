@@ -68,7 +68,7 @@ typedef struct {
  */
 static const field_row_t presence_fields[] = {
     {"machine_class",     48,  8, 0},
-    {"capability_digest", 56, 24, 0},
+    {"capability_tag", 56, 24, 0},
     {"ttl",               80,  8, 0}
 };
 
@@ -176,8 +176,8 @@ static int set_field(mcl_wire_tier0_t *object, const char *field, int32_t value)
     case MCL_WIRE_KIND_PRESENCE:
         if (strcmp(field, "machine_class") == 0) {
             object->body.presence.machine_class = (uint8_t)value; return 1; }
-        if (strcmp(field, "capability_digest") == 0) {
-            object->body.presence.capability_digest = (uint32_t)value; return 1; }
+        if (strcmp(field, "capability_tag") == 0) {
+            object->body.presence.capability_tag = (uint32_t)value; return 1; }
         if (strcmp(field, "ttl") == 0) {
             object->body.presence.ttl = (uint8_t)value; return 1; }
         return 0;
@@ -270,7 +270,7 @@ static int32_t get_field(const mcl_wire_tier0_t *object, const char *field,
     switch (object->kind) {
     case MCL_WIRE_KIND_PRESENCE:
         if (strcmp(field, "machine_class") == 0) return (int32_t)probe.body.presence.machine_class;
-        if (strcmp(field, "capability_digest") == 0) return (int32_t)probe.body.presence.capability_digest;
+        if (strcmp(field, "capability_tag") == 0) return (int32_t)probe.body.presence.capability_tag;
         if (strcmp(field, "ttl") == 0) return (int32_t)probe.body.presence.ttl;
         break;
     case MCL_WIRE_KIND_HAZARD:

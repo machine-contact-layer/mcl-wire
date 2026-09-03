@@ -407,7 +407,7 @@ mcl_wire_status_t mcl_wire_tier0_encode(
     switch (object->kind) {
     case MCL_WIRE_KIND_PRESENCE:
         MCL_TRY(mcl_write_u(&writer, object->body.presence.machine_class, 8u));
-        MCL_TRY(mcl_write_u(&writer, object->body.presence.capability_digest, 24u));
+        MCL_TRY(mcl_write_u(&writer, object->body.presence.capability_tag, 24u));
         MCL_TRY(mcl_write_u(&writer, object->body.presence.ttl, 8u));
         break;
     case MCL_WIRE_KIND_HAZARD:
@@ -514,7 +514,7 @@ mcl_wire_status_t mcl_wire_tier0_decode_body(
         MCL_TRY(mcl_read_u(&reader, 8u, &unsigned_value));
         object->body.presence.machine_class = (uint8_t)unsigned_value;
         MCL_TRY(mcl_read_u(&reader, 24u, &unsigned_value));
-        object->body.presence.capability_digest = unsigned_value;
+        object->body.presence.capability_tag = unsigned_value;
         MCL_TRY(mcl_read_u(&reader, 8u, &unsigned_value));
         object->body.presence.ttl = (uint8_t)unsigned_value;
         break;

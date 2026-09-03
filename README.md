@@ -127,15 +127,19 @@ The protocol library itself is also compiled in freestanding mode for small ARM 
 The expected means are:
 
 ```text
-compact JSON                   122.146 B
-CBOR string keys                87.659 B
+compact JSON                   121.927 B
+CBOR string keys                87.439 B
 CBOR integer keys               26.463 B
 typed proto3-equivalent         22.488 B
-MCL fixed Tier-0                14.683 B
-historical context candidate    11.683 B
+MCL fixed Tier-0                15.073 B
+historical context candidate    12.073 B
 ```
 
-The 11.683-byte number remains a historical established-context research result. It is not delta coding and is not a first-contact encoding.
+The 12.073-byte number remains a historical established-context research result. It is not delta coding and is not a first-contact encoding.
+
+These are the figures the program prints today, and they have moved twice for reasons worth recording. The MCL rows grew when `TRANSPORT_ACCEPT` was added to the codec — a seventh object with its own body raises the mean. The two name-carrying baselines shrank by 9 bytes each when `capability_digest` was renamed to `capability_tag`, because a shorter key costs fewer bytes in any format that spells its field names out. That narrows MCL's own advantage slightly, which is the honest direction to report it in.
+
+`benchmarks/results/source-codec-summary-v0.2.json` is the **retained v0.2 study** and is deliberately not rewritten to match. It records what was measured then.
 
 ## Status
 

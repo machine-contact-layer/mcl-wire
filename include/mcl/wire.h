@@ -42,9 +42,46 @@ typedef struct {
     uint8_t extension_present;
 } mcl_wire_header_t;
 
+/*
+ * capability_tag is a 24-bit SENDER-CONTROLLED OPAQUE REVISION TOKEN.
+ *
+ * It was called capability_digest, and that name was a lie. "Digest" asserts
+ * that equal values imply equal capabilities, and nothing provided that
+ * property: there was no canonical input, no algorithm, and no collision
+ * semantics. Nothing computed it. Charter 2.11 forbids naming a mechanism for a
+ * property it lacks, and an implementer who trusted the old name would have
+ * compared two senders' values and concluded something false.
+ *
+ * Defining a real digest was the alternative and was rejected: it needs a
+ * canonical capability serialisation, an algorithm with its own versioning, and
+ * collision semantics for a 24-bit space whose birthday bound is around 4096
+ * distinct capability sets. That is a great deal of machinery for what PRESENCE
+ * actually needs, which is "have your capabilities changed since I last asked".
+ *
+ * NORMATIVE CONTRACT
+ *
+ *   The sender MUST change capability_tag when the set or meaning of the
+ *   capabilities it advertises for the current contact changes.
+ *
+ *   A receiver MUST scope the tag to the advertising source/contact. It MUST
+ *   NOT compare tags from different peers as capability identities.
+ *
+ *   The tag provides no authenticity, no integrity, no uniqueness and no
+ *   cryptographic collision resistance.
+ *
+ *   A receiver MAY use equality only as a cache or renegotiation hint.
+ *
+ * No randomness and no hashing is required. Incrementing a counter conforms.
+ * A collision between two senders is harmless by construction, because
+ * comparing across senders is forbidden; a collision within one sender costs
+ * one unnecessary capability exchange.
+ *
+ * `capability_revision` was considered and rejected: it implies monotonicity
+ * this contract does not require.
+ */
 typedef struct {
     uint8_t machine_class;
-    uint32_t capability_digest;
+    uint32_t capability_tag;
     uint8_t ttl;
 } mcl_wire_presence_t;
 

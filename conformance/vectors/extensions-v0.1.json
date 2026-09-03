@@ -11,7 +11,7 @@
     "priority": 1,
     "source_ref": 41340,
     "machine_class": 3,
-    "capability_digest": 11259375,
+    "capability_tag": 11259375,
     "ttl": 60,
     "note": "The same object carries every vector below, so any byte difference is attributable to the extension block alone."
   },

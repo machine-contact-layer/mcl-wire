@@ -169,7 +169,7 @@ static void make_presence(mcl_wire_tier0_t *object)
     object->priority = 1u;
     object->source_ref = 0x0000A17Cu;
     object->body.presence.machine_class = 3u;
-    object->body.presence.capability_digest = 0x00ABCDEFu;
+    object->body.presence.capability_tag = 0x00ABCDEFu;
     object->body.presence.ttl = 60u;
 }
 
