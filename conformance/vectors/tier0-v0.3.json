@@ -1,0 +1,24 @@
+{
+  "status": "research candidate, non-normative",
+  "wire_header": "v0.2 category/opcode candidate (unchanged)",
+  "wire_major": 0,
+  "supersedes": "tier0-v0.2.json, for the two TRANSPORT objects only",
+  "notes": [
+    "A new versioned artifact rather than an edit. tier0-v0.1.json and tier0-v0.2.json remain exactly as published: historical conformance vectors are never rewritten to make newer code look compatible.",
+    "TRANSPORT_OFFER and TRANSPORT_ACCEPT gained a 32-bit migration_ref, so their bytes changed. TRANSPORT_OFFER is 13 -> 17 bytes and TRANSPORT_ACCEPT is 12 -> 16 bytes. The Tier-0 maximum was already 17 (REQUEST), so the correlator cost no additional maximum size.",
+    "WHY migration_ref EXISTS: without it, a delayed TRANSPORT_ACCEPT belonging to an abandoned offer is indistinguishable from the acceptance of the current one, because transport_id and profile_id are normally identical across a retry. The peer would migrate on the strength of a stale acceptance. CoAP carries a Token echoed by the responder, and MCTP keeps its message tag separate from endpoint addressing, for the same reason.",
+    "migration_ref correlates one transport-change transaction. It is not identity, not authorization, not a session reference, and not a secret. Zero is reserved.",
+    "The other five Tier-0 layouts are byte-identical to v0.1 and v0.2 and are repeated here so this file is a complete set.",
+    "transport_id values are assigned by mcl-link/registries/transport-ids-v0.1.json: 1 MCL_AP, 2 MCL_IP, 3 MCL_BLE, 4 MCL_UWB. Both transport vectors below use 2 = MCL_IP.",
+    "Do not infer transport assignments from vector provenance; see the warning in tier0-v0.2.json."
+  ],
+  "vectors": [
+    {"name":"PRESENCE","length":11,"hex":"0002aa0000010100001f79"},
+    {"name":"HAZARD","length":15,"hex":"030ea1000001017f00680100002878"},
+    {"name":"REQUEST","length":17,"hex":"050ca100000102b1000002010000030e40"},
+    {"name":"AUTHORITY_CLAIM","length":14,"hex":"010ca30000010459003c28c06fc0"},
+    {"name":"DEGRADED_STATE","length":10,"hex":"060cac0000010296e4c0"},
+    {"name":"TRANSPORT_OFFER","length":17,"hex":"0802ae0000014d1942010201d00d00019f"},
+    {"name":"TRANSPORT_ACCEPT","length":16,"hex":"080ab00000024d19420102015e5510c7"}
+  ]
+}

@@ -125,12 +125,14 @@ static void mcl_test_fill(mcl_wire_tier0_t *object, mcl_wire_kind_t kind)
         object->body.degraded_state.ttl = (uint8_t)mcl_test_random();
         break;
     case MCL_WIRE_KIND_TRANSPORT_OFFER:
+        object->body.transport_offer.migration_ref = mcl_test_random();
         object->body.transport_offer.transport_id = (uint8_t)mcl_test_random();
         object->body.transport_offer.profile_id = (uint8_t)mcl_test_random();
         object->body.transport_offer.endpoint_token = mcl_test_random();
         object->body.transport_offer.validity = (uint8_t)mcl_test_random();
         break;
     case MCL_WIRE_KIND_TRANSPORT_ACCEPT:
+        object->body.transport_accept.migration_ref = mcl_test_random();
         object->body.transport_accept.transport_id = (uint8_t)mcl_test_random();
         object->body.transport_accept.profile_id = (uint8_t)mcl_test_random();
         object->body.transport_accept.session_ref = mcl_test_random();
@@ -150,7 +152,7 @@ static int mcl_kind_has_padding(mcl_wire_kind_t kind)
 
 static void mcl_test_tier0_roundtrips(void)
 {
-    static const size_t expected_sizes[7] = {11u, 15u, 17u, 14u, 10u, 13u, 12u};
+    static const size_t expected_sizes[7] = {11u, 15u, 17u, 14u, 10u, 17u, 16u};
     unsigned kind_index;
     unsigned trial;
     uint8_t encoded[MCL_WIRE_TIER0_MAX_SIZE];

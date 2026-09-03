@@ -82,7 +82,21 @@ typedef struct {
     uint8_t ttl;
 } mcl_wire_degraded_state_t;
 
+/*
+ * migration_ref correlates one transport-change transaction, and nothing else.
+ *
+ * Without it a delayed acceptance from an abandoned offer is indistinguishable
+ * from the acceptance of the current one, because transport_id and profile_id
+ * are usually identical across a retry. Mature request/response protocols carry
+ * a dedicated correlator for exactly this reason: CoAP's Token, which the
+ * responder echoes, and MCTP's message tag, which is kept separate from
+ * endpoint addressing rather than overloaded onto it.
+ *
+ * It is NOT identity, NOT authorization, NOT a session, and NOT a secret. Zero
+ * is reserved so an uninitialised field never names a live transaction.
+ */
 typedef struct {
+    uint32_t migration_ref;
     uint8_t transport_id;
     uint8_t profile_id;
     uint32_t endpoint_token;
@@ -102,6 +116,7 @@ typedef struct {
  * contact; it establishes nothing whatever about who the peer is.
  */
 typedef struct {
+    uint32_t migration_ref;
     uint8_t transport_id;
     uint8_t profile_id;
     uint32_t session_ref;

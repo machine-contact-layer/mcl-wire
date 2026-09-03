@@ -276,6 +276,15 @@ static void populate_object(const bench_event_t *event, mcl_wire_tier0_t *object
         object->body.degraded_state.ttl=(uint8_t)require_value(event,"ttl");
         break;
     case MCL_WIRE_KIND_TRANSPORT_OFFER:
+        /*
+         * The derived case file predates migration_ref and carries no value for
+         * it. Set a fixed one rather than leaving it indeterminate: this
+         * benchmark round-trips each object and compares the structs, so an
+         * uninitialised field would make the comparison depend on stack
+         * residue. The constant measures size, and says nothing about protocol
+         * validity.
+         */
+        object->body.transport_offer.migration_ref=UINT32_C(1);
         object->body.transport_offer.transport_id=(uint8_t)require_value(event,"transport_id");
         object->body.transport_offer.profile_id=(uint8_t)require_value(event,"profile_id");
         object->body.transport_offer.endpoint_token=(uint32_t)require_value(event,"endpoint_token");
@@ -341,8 +350,14 @@ int main(int argc, char **argv)
     BENCH_REQUIRE(cbor_string_total==UINT64_C(3594));
     BENCH_REQUIRE(cbor_integer_total==UINT64_C(1085));
     BENCH_REQUIRE(protobuf_total==UINT64_C(922));
-    BENCH_REQUIRE(fixed_total==UINT64_C(602));
-    BENCH_REQUIRE(context_total==UINT64_C(479));
+        /*
+     * 602 -> 618 and 479 -> 495 because TRANSPORT_OFFER grew from 13 to 17
+     * bytes when migration_ref was added, across the four TRANSPORT_OFFER
+     * events in this corpus. The retained v0.1 result file is NOT edited; a
+     * v0.2 result records the new figures alongside it.
+     */
+    BENCH_REQUIRE(fixed_total==UINT64_C(618));
+    BENCH_REQUIRE(context_total==UINT64_C(495));
 
     printf("cases: %zu\n",case_count);
     printf("compact JSON mean: %.3f B\n",(double)json_total/(double)case_count);

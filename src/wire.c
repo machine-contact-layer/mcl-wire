@@ -272,10 +272,14 @@ size_t mcl_wire_tier0_encoded_size(mcl_wire_kind_t kind)
     case MCL_WIRE_KIND_DEGRADED_STATE:
         return 10u;
     case MCL_WIRE_KIND_TRANSPORT_OFFER:
-        return 13u;
+        /* header 2 + source_ref 4 + migration_ref 4 + transport 1 + profile 1
+         * + endpoint_token 4 + validity 1. Equal to the Tier-0 maximum, so
+         * adding the transaction correlator did not widen it. */
+        return 17u;
     case MCL_WIRE_KIND_TRANSPORT_ACCEPT:
-        /* header 2 + source_ref 4 + transport 1 + profile 1 + session_ref 4. */
-        return 12u;
+        /* header 2 + source_ref 4 + migration_ref 4 + transport 1 + profile 1
+         * + session_ref 4. */
+        return 16u;
     default:
         return 0u;
     }
@@ -369,12 +373,14 @@ mcl_wire_status_t mcl_wire_tier0_encode(
         MCL_TRY(mcl_write_u(&writer, object->body.degraded_state.ttl, 8u));
         break;
     case MCL_WIRE_KIND_TRANSPORT_OFFER:
+        MCL_TRY(mcl_write_u(&writer, object->body.transport_offer.migration_ref, 32u));
         MCL_TRY(mcl_write_u(&writer, object->body.transport_offer.transport_id, 8u));
         MCL_TRY(mcl_write_u(&writer, object->body.transport_offer.profile_id, 8u));
         MCL_TRY(mcl_write_u(&writer, object->body.transport_offer.endpoint_token, 32u));
         MCL_TRY(mcl_write_u(&writer, object->body.transport_offer.validity, 8u));
         break;
     case MCL_WIRE_KIND_TRANSPORT_ACCEPT:
+        MCL_TRY(mcl_write_u(&writer, object->body.transport_accept.migration_ref, 32u));
         MCL_TRY(mcl_write_u(&writer, object->body.transport_accept.transport_id, 8u));
         MCL_TRY(mcl_write_u(&writer, object->body.transport_accept.profile_id, 8u));
         MCL_TRY(mcl_write_u(&writer, object->body.transport_accept.session_ref, 32u));
@@ -489,6 +495,7 @@ mcl_wire_status_t mcl_wire_tier0_decode(
         object->body.degraded_state.ttl = (uint8_t)unsigned_value;
         break;
     case MCL_WIRE_KIND_TRANSPORT_OFFER:
+        MCL_TRY(mcl_read_u(&reader, 32u, &object->body.transport_offer.migration_ref));
         MCL_TRY(mcl_read_u(&reader, 8u, &unsigned_value));
         object->body.transport_offer.transport_id = (uint8_t)unsigned_value;
         MCL_TRY(mcl_read_u(&reader, 8u, &unsigned_value));
@@ -498,6 +505,7 @@ mcl_wire_status_t mcl_wire_tier0_decode(
         object->body.transport_offer.validity = (uint8_t)unsigned_value;
         break;
     case MCL_WIRE_KIND_TRANSPORT_ACCEPT:
+        MCL_TRY(mcl_read_u(&reader, 32u, &object->body.transport_accept.migration_ref));
         MCL_TRY(mcl_read_u(&reader, 8u, &unsigned_value));
         object->body.transport_accept.transport_id = (uint8_t)unsigned_value;
         MCL_TRY(mcl_read_u(&reader, 8u, &unsigned_value));

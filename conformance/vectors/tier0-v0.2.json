@@ -2,6 +2,7 @@
   "status": "research candidate, non-normative",
   "wire_header": "v0.2 category/opcode candidate",
   "wire_major": 0,
+  "superseded_by": "tier0-v0.3.json, for the two TRANSPORT objects only. The bytes in this file remain the correct record of the layout as published and are deliberately not updated.",
   "notes": [
     "These vectors exercise the seven currently measured Tier-0 layouts through the freestanding C99 reference codec.",
     "The historical tier0-v0.1.json vectors remain unchanged.",
