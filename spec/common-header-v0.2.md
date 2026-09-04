@@ -79,14 +79,23 @@ different majors. This is permitted: `major_version` is a per-object header
 field, not a per-link property. What a peer **MUST NOT** do is infer support for
 one major from having observed the other.
 
-**Status.** Major 1 is defined (`MCL_WIRE_STABLE_MAJOR`) and **not yet cut**.
-The decoder refuses it along with every unassigned major, because accepting
-frames under a major whose bodies are not frozen would be the cutting, and that
-is gated on the Stable meanings closing (`V1_SCOPE.md` §5.8). The rule is
-written and tested now — `mcl_wire_kind_allowed_at_major`,
-`mcl-wire/tests/test_major_rule.c` — so that it exists before the first major-1
-vector is generated. A vector frozen under an ambiguous rule fixes the ambiguity
-into the artifacts that define the release.
+**Status.** Major 1 (`MCL_WIRE_STABLE_MAJOR`) is **cut** for v1.0. The codec
+encodes and decodes it, and the immutable major-1 vector family
+(`mcl-wire/vectors/tier0-major1-v1.0.json`) is frozen against it. Majors other
+than 0 and 1 are unassigned and are refused, never guessed at.
+
+Cutting was gated on the Stable meanings closing (`V1_SCOPE.md` §5.8), because
+accepting frames under a major whose bodies were not frozen would itself have
+been the cutting. The rule above was written and tested **before** the first
+major-1 vector was generated — `mcl_wire_kind_allowed_at_major`,
+`mcl-wire/tests/test_major_rule.c` — so that no vector was frozen under an
+ambiguous rule.
+
+A decoder MUST apply both halves of the check. That an object arrives at an
+assigned major does not make it admissible **at** that major: a Candidate object
+presented at major 1 is refused with `UNSUPPORTED_SEMANTIC`, and a major-0
+`PRESENCE` presented at major 1 is refused on length, because major 1 drops
+`machine_class` and the body is 10 bytes rather than 11.
 
 ## 4. Category/opcode separation
 

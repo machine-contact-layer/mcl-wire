@@ -13,12 +13,20 @@ extern "C" {
 /*
  * The first Stable major.
  *
- * NOT YET CUT. The decoder still refuses it: cutting major 1 is gated on the
- * Stable meanings closing (mcl-core/governance/V1_SCOPE.md section 5.8), and
- * accepting frames under a major whose bodies are not frozen would be the
- * cutting. What exists now is the RULE that will govern it, defined and tested
- * before any major-1 vector is generated, because a vector frozen under an
- * ambiguous rule fixes the ambiguity into the artifacts that define the release.
+ * CUT for v1.0. The codec encodes and decodes it, and the immutable major-1
+ * vector family is frozen against it.
+ *
+ * Cutting was gated on the Stable meanings closing
+ * (mcl-core/governance/V1_SCOPE.md section 5.8), because accepting frames under
+ * a major whose bodies are not frozen would itself have been the cutting. The
+ * RULE that governs which objects this major may carry was written and tested
+ * BEFORE the first major-1 vector was generated -- see
+ * mcl_wire_kind_allowed_at_major and mcl-wire/tests/test_major_rule.c -- so
+ * that no vector was frozen under an ambiguous rule.
+ *
+ * What this major carries is not "everything implemented": only PRESENCE,
+ * TRANSPORT_OFFER and TRANSPORT_ACCEPT. A Candidate object offered here is
+ * refused, not decoded.
  */
 #define MCL_WIRE_STABLE_MAJOR 1u
 

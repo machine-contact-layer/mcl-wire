@@ -577,12 +577,15 @@ mcl_wire_status_t mcl_wire_tier0_decode_body(
     if (header.major_version != MCL_WIRE_EXPERIMENTAL_MAJOR &&
         header.major_version != MCL_WIRE_STABLE_MAJOR) {
         /*
-         * Major 1 is defined (MCL_WIRE_STABLE_MAJOR) but NOT YET CUT, so it is
-         * refused here along with every unassigned major. When it is cut, this
-         * becomes an allowed-major check followed by
-         * mcl_wire_kind_allowed_at_major on the decoded kind -- the rule is
-         * already written and tested so that it cannot be forgotten between now
-         * and the moment major-1 vectors are frozen.
+         * Two majors are assigned: 0 (experimental) and 1 (Stable, cut for
+         * v1.0). Every other major is unassigned and is refused here rather
+         * than guessed at.
+         *
+         * This is only the first half of the check. Being carried at an
+         * assigned major does not make an object admissible AT that major:
+         * mcl_wire_tier0_encoded_size_at_major below returns 0 for a kind this
+         * major does not carry, and that is the refusal for a Candidate object
+         * offered at the Stable major.
          */
         return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;
     }

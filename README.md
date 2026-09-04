@@ -145,4 +145,25 @@ These are the figures the program prints today, and they have moved twice for re
 
 ## Status
 
-Private research repository. Pre-v0.1 candidate specification and reference implementation. Passing the local C tests is implementation evidence, not independent interoperability or field validation.
+**Wire major 1 is cut and is part of MCL v1.0.** It carries `PRESENCE`,
+`TRANSPORT_OFFER` and `TRANSPORT_ACCEPT` and refuses every other kind: a
+Candidate object presented at the Stable major is rejected, not decoded. Major-1
+`PRESENCE` drops `machine_class`, so it is 10 bytes where major 0 is 11. The
+frozen bytes are [`vectors/tier0-major1-v1.0.json`](vectors/tier0-major1-v1.0.json),
+which records expected **field values** and not only lengths and hex — a
+clean-room implementation once passed a length check while misreading every
+field after `source_ref`.
+
+`mcl_wire_tier0_encode` still emits major 0, because v1.0 promises source
+compatibility. Use `mcl_wire_tier0_encode_at_major` to choose.
+
+Major 0 is permanent and does not change. `HAZARD`, `REQUEST`,
+`AUTHORITY_CLAIM` and `DEGRADED_STATE` stay there: their layouts and vectors
+exist, their *meanings* may still change, and that is exactly what a frozen
+major may not contain.
+
+Passing the local C tests is implementation evidence, not independent
+interoperability or field validation. What independent evidence exists is
+`mcl-core/conformance/independent/` — a clean-room implementation sharing no
+code, no language and no build system — and v1.0 does not claim that anyone
+outside this project has implemented or reviewed these specifications.
