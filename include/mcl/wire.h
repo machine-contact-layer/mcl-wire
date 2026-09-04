@@ -291,6 +291,29 @@ size_t mcl_wire_tier0_encoded_size(mcl_wire_kind_t kind);
  */
 size_t mcl_wire_tier0_encoded_size_at_major(uint8_t major, mcl_wire_kind_t kind);
 
+/*
+ * Encode at a specific Wire major.
+ *
+ * mcl_wire_tier0_encode() is this function at MCL_WIRE_EXPERIMENTAL_MAJOR, kept
+ * so that callers written before major 1 was cut continue to compile and to
+ * emit exactly the bytes they emitted before. v1.0 promises source
+ * compatibility (V1_SCOPE 4.5), and silently changing what an existing call
+ * puts on the wire would break it in the worst possible way -- invisibly.
+ *
+ * Returns MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC when `major` does not carry
+ * `object->kind`: a Candidate object at the Stable major, or any unassigned
+ * major.
+ *
+ * The two majors do not agree about PRESENCE. Major 1 omits machine_class, so
+ * the same object encodes to 11 bytes at major 0 and 10 at major 1.
+ */
+mcl_wire_status_t mcl_wire_tier0_encode_at_major(
+    uint8_t major,
+    const mcl_wire_tier0_t *object,
+    uint8_t *out,
+    size_t out_capacity,
+    size_t *written);
+
 mcl_wire_status_t mcl_wire_tier0_encode(
     const mcl_wire_tier0_t *object,
     uint8_t *out,

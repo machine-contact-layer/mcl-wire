@@ -398,6 +398,23 @@ mcl_wire_status_t mcl_wire_tier0_encode(
     size_t out_capacity,
     size_t *written)
 {
+    /*
+     * The experimental major, for source compatibility. Callers written before
+     * major 1 was cut keep working unchanged and keep emitting major-0 bytes,
+     * which is what they were already doing. A caller that wants the Stable
+     * major asks for it by name.
+     */
+    return mcl_wire_tier0_encode_at_major(MCL_WIRE_EXPERIMENTAL_MAJOR, object,
+                                          out, out_capacity, written);
+}
+
+mcl_wire_status_t mcl_wire_tier0_encode_at_major(
+    uint8_t major,
+    const mcl_wire_tier0_t *object,
+    uint8_t *out,
+    size_t out_capacity,
+    size_t *written)
+{
     mcl_bit_writer_t writer;
     uint8_t category;
     uint8_t opcode;
@@ -409,7 +426,12 @@ mcl_wire_status_t mcl_wire_tier0_encode(
         return MCL_WIRE_ERR_INVALID_ARGUMENT;
     }
 
-    required = mcl_wire_tier0_encoded_size(object->kind);
+    /*
+     * Zero for an object this major does not carry. That covers both a
+     * Candidate object offered at the Stable major and any unassigned major,
+     * and it is why the size lookup is major-aware rather than kind-only.
+     */
+    required = mcl_wire_tier0_encoded_size_at_major(major, object->kind);
     if (required == 0u) {
         return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;
     }
@@ -420,7 +442,7 @@ mcl_wire_status_t mcl_wire_tier0_encode(
     mcl_zero_bytes(out, required);
     mcl_kind_to_code(object->kind, &category, &opcode);
 
-    header.major_version = MCL_WIRE_EXPERIMENTAL_MAJOR;
+    header.major_version = major;
     header.category = category;
     header.opcode = opcode;
     header.priority = object->priority;
@@ -438,7 +460,12 @@ mcl_wire_status_t mcl_wire_tier0_encode(
 
     switch (object->kind) {
     case MCL_WIRE_KIND_PRESENCE:
-        MCL_TRY(mcl_write_u(&writer, object->body.presence.machine_class, 8u));
+        if (major != MCL_WIRE_STABLE_MAJOR) {
+            /* Major 0 only. The Stable body drops machine_class; see
+             * V1_SCOPE section 4.8 and MACHINE_CLASS_AUDIT.md. */
+            MCL_TRY(mcl_write_u(&writer,
+                                object->body.presence.machine_class, 8u));
+        }
         MCL_TRY(mcl_write_u(&writer, object->body.presence.capability_tag, 24u));
         MCL_TRY(mcl_write_u(&writer, object->body.presence.ttl, 8u));
         break;
@@ -547,7 +574,8 @@ mcl_wire_status_t mcl_wire_tier0_decode_body(
     }
 
     MCL_TRY(mcl_wire_header_decode(data, &header));
-    if (header.major_version != MCL_WIRE_EXPERIMENTAL_MAJOR) {
+    if (header.major_version != MCL_WIRE_EXPERIMENTAL_MAJOR &&
+        header.major_version != MCL_WIRE_STABLE_MAJOR) {
         /*
          * Major 1 is defined (MCL_WIRE_STABLE_MAJOR) but NOT YET CUT, so it is
          * refused here along with every unassigned major. When it is cut, this
@@ -567,7 +595,17 @@ mcl_wire_status_t mcl_wire_tier0_decode_body(
      */
 
     MCL_TRY(mcl_code_to_kind(header.category, header.opcode, &kind));
-    required = mcl_wire_tier0_encoded_size(kind);
+
+    /*
+     * Major-aware, and it must be. A size derived from the kind alone would
+     * read a major-1 PRESENCE as 11 bytes when it is 10, and a Candidate object
+     * offered at the Stable major would decode instead of being refused.
+     * Zero means this major does not carry this object at all -- V1_SCOPE 4.7.
+     */
+    required = mcl_wire_tier0_encoded_size_at_major(header.major_version, kind);
+    if (required == 0u) {
+        return MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC;
+    }
     if (data_size < required) {
         return MCL_WIRE_ERR_TRUNCATED;
     }
@@ -584,8 +622,13 @@ mcl_wire_status_t mcl_wire_tier0_decode_body(
 
     switch (kind) {
     case MCL_WIRE_KIND_PRESENCE:
-        MCL_TRY(mcl_read_u(&reader, 8u, &unsigned_value));
-        object->body.presence.machine_class = (uint8_t)unsigned_value;
+        if (header.major_version != MCL_WIRE_STABLE_MAJOR) {
+            MCL_TRY(mcl_read_u(&reader, 8u, &unsigned_value));
+            object->body.presence.machine_class = (uint8_t)unsigned_value;
+        }
+        /* At the Stable major the field is absent and the struct member stays
+         * zero from mcl_zero_bytes above. A caller must not read it: absent is
+         * not "class 0", and there is no class 0. */
         MCL_TRY(mcl_read_u(&reader, 24u, &unsigned_value));
         object->body.presence.capability_tag = unsigned_value;
         MCL_TRY(mcl_read_u(&reader, 8u, &unsigned_value));

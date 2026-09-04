@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static int g_checks = 0;
 
@@ -117,53 +118,96 @@ static void test_unknown_kind_refused_at_every_major(void)
 }
 
 /*
- * Major 1 is DEFINED but NOT CUT. The decoder must still refuse it: accepting
- * frames under a major whose bodies are not frozen would be the cutting, and
- * that is gated on the Stable meanings closing.
+ * Major 1 is CUT. This test previously asserted the opposite -- that a
+ * major-1 frame was refused -- because accepting frames under a major whose
+ * bodies were not frozen would have BEEN the cutting. The bodies are frozen
+ * now, so the assertion is inverted rather than deleted: the record of what
+ * the rule was before the cut lives in the commit history, and what it is
+ * after lives here.
  */
-static void test_stable_major_is_not_yet_accepted_on_the_wire(void)
+static void test_stable_major_round_trips(void)
 {
     uint8_t frame[MCL_WIRE_TIER0_MAX_SIZE];
     mcl_wire_tier0_t object;
+    mcl_wire_tier0_t presence;
     size_t consumed = 0u;
     size_t written = 0u;
-    mcl_wire_tier0_t presence;
 
-    printf("[TEST] the Stable major is defined but not yet accepted\n");
+    printf("[TEST] the Stable major round trips, and is 10 bytes\n");
 
-    /* A real, valid PRESENCE encoded at the experimental major. */
     presence.kind = MCL_WIRE_KIND_PRESENCE;
     presence.priority = 1u;
     presence.source_ref = 0x11223344u;
-    presence.body.presence.machine_class = 1u;
-    presence.body.presence.capability_tag = 0x000001u;
+    presence.body.presence.machine_class = 7u;   /* must NOT reach the wire */
+    presence.body.presence.capability_tag = 0x00ABCDu;
     presence.body.presence.ttl = 60u;
 
+    CHECK(mcl_wire_tier0_encode_at_major(MCL_WIRE_STABLE_MAJOR, &presence,
+                                         frame, sizeof(frame), &written) ==
+              MCL_WIRE_OK,
+          "PRESENCE encodes at the Stable major");
+    CHECK(written == 10u, "and is 10 bytes");
+    CHECK((frame[0] >> 4) == MCL_WIRE_STABLE_MAJOR,
+          "and the header names major 1");
+
+    CHECK(mcl_wire_tier0_decode(frame, written, &object, &consumed) ==
+              MCL_WIRE_OK,
+          "and decodes");
+    CHECK(consumed == written, "consuming every byte");
+    CHECK(object.source_ref == presence.source_ref, "source_ref survives");
+    CHECK(object.body.presence.capability_tag == 0x00ABCDu,
+          "capability_tag survives");
+    CHECK(object.body.presence.ttl == 60u, "ttl survives");
+    /* machine_class was never written, so the decoder leaves it zero. Absent
+     * is not "class 0" -- there is no class 0 -- and a caller must not read it
+     * at this major. */
+    CHECK(object.body.presence.machine_class == 0u,
+          "machine_class did not reach the wire");
+
+    /* The default entry point still emits major 0, unchanged. That is the
+     * source-compatibility promise: an existing caller's bytes do not move. */
     CHECK(mcl_wire_tier0_encode(&presence, frame, sizeof(frame), &written) ==
               MCL_WIRE_OK,
-          "PRESENCE encodes at the experimental major");
-    CHECK(mcl_wire_tier0_decode(frame, written, &object, &consumed) ==
-              MCL_WIRE_OK,
-          "and decodes there");
-
-    /* Rewrite the header's major nibble to the Stable major and try again.
-     * PRESENCE is a Stable object, so this is refused for the version, not for
-     * the object -- which is what "not yet cut" means. */
-    frame[0] = (uint8_t)((MCL_WIRE_STABLE_MAJOR << 4) | (frame[0] & 0x0Fu));
-    CHECK(mcl_wire_tier0_decode(frame, written, &object, &consumed) ==
-              MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC,
-          "major 1 is refused on the wire until it is cut");
-
-    /* And the rule already says PRESENCE would be welcome there. */
-    CHECK(mcl_wire_kind_allowed_at_major(MCL_WIRE_STABLE_MAJOR,
-                                         MCL_WIRE_KIND_PRESENCE) == 1,
-          "the rule and the decoder disagree only about timing");
+          "the default entry point still works");
+    CHECK(written == 11u, "and still emits an 11-byte major-0 PRESENCE");
+    CHECK((frame[0] >> 4) == MCL_WIRE_EXPERIMENTAL_MAJOR,
+          "naming major 0");
 }
 
 /*
- * The two majors do not agree about PRESENCE, and that disagreement is the
- * point: major 1 drops machine_class on the evidence in MACHINE_CLASS_AUDIT.md.
+ * A Candidate object offered at the Stable major is refused at BOTH ends.
  */
+static void test_candidate_refused_at_stable_major(void)
+{
+    uint8_t frame[MCL_WIRE_TIER0_MAX_SIZE];
+    mcl_wire_tier0_t object;
+    mcl_wire_tier0_t hazard;
+    size_t written = 0u;
+    size_t consumed = 0u;
+
+    printf("[TEST] a Candidate object cannot travel at the Stable major\n");
+
+    memset(&hazard, 0, sizeof(hazard));
+    hazard.kind = MCL_WIRE_KIND_HAZARD;
+    hazard.priority = 2u;
+    hazard.source_ref = 0x55667788u;
+
+    CHECK(mcl_wire_tier0_encode_at_major(MCL_WIRE_STABLE_MAJOR, &hazard,
+                                         frame, sizeof(frame), &written) ==
+              MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC,
+          "the encoder refuses to produce one");
+
+    /* And a peer that produced one anyway is refused on receipt: encode a
+     * legal major-0 HAZARD, then rewrite the major nibble. */
+    CHECK(mcl_wire_tier0_encode(&hazard, frame, sizeof(frame), &written) ==
+              MCL_WIRE_OK,
+          "HAZARD encodes at the experimental major");
+    frame[0] = (uint8_t)((MCL_WIRE_STABLE_MAJOR << 4) | (frame[0] & 0x0Fu));
+    CHECK(mcl_wire_tier0_decode(frame, written, &object, &consumed) ==
+              MCL_WIRE_ERR_UNSUPPORTED_SEMANTIC,
+          "and the decoder refuses it, never guessing a layout");
+}
+
 static void test_major_1_presence_drops_machine_class(void)
 {
     unsigned k;
@@ -213,7 +257,8 @@ int main(void)
     test_exactly_three_are_stable();
     test_unassigned_majors_are_refused();
     test_unknown_kind_refused_at_every_major();
-    test_stable_major_is_not_yet_accepted_on_the_wire();
+    test_stable_major_round_trips();
+    test_candidate_refused_at_stable_major();
     test_major_1_presence_drops_machine_class();
 
     printf("\n%d checks, 0 failed.\n", g_checks);

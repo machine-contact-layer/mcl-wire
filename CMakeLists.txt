@@ -52,6 +52,20 @@ if(MCL_WIRE_BUILD_TESTS)
     # than none: the implementer builds to it, the bytes disagree, and the
     # disagreement gets blamed on whichever side is younger. This transcribes
     # its table as data and checks it against the codec in both directions.
+    # The major-1 vector family, checked FIELD BY FIELD. A vector suite that
+    # compares only lengths cannot catch a layout whose widths sum correctly;
+    # see the comment at the top of the validator.
+    add_executable(mcl_wire_validate_major1_vectors
+        tools/validate_major1_vectors.c)
+    target_link_libraries(mcl_wire_validate_major1_vectors PRIVATE mcl_wire)
+    set_target_properties(mcl_wire_validate_major1_vectors PROPERTIES
+        C_STANDARD 99
+        C_STANDARD_REQUIRED YES
+        C_EXTENSIONS NO)
+    add_test(NAME mcl_wire_major1_vectors
+             COMMAND mcl_wire_validate_major1_vectors
+                     "${CMAKE_CURRENT_SOURCE_DIR}/conformance/vectors/tier0-major1-v1.0.json")
+
     add_executable(mcl_wire_validate_tier0_layout tools/validate_tier0_layout.c)
     target_link_libraries(mcl_wire_validate_tier0_layout PRIVATE mcl_wire)
     set_target_properties(mcl_wire_validate_tier0_layout PROPERTIES
