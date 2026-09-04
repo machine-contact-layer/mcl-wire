@@ -1,116 +1,128 @@
 {
-  "vector_family": "tier0-major1-v1.0",
-  "status": "immutable",
-  "wire_major": 1,
-  "generated": "2026-09-04",
-  "supersedes_nothing": "This is a NEW family, not a revision. tier0-v0.1.json, tier0-v0.2.json and tier0-v0.3.json remain exactly as published: they record what major-0 implementations emit, and major 0 is permanent. Historical vectors are never rewritten to make newer code look compatible.",
-  "immutability": "Once released these bytes do not change. A defect found here is corrected by publishing a new family, never by editing this one -- an implementer who fetched this file must be able to trust that what they tested against is what everyone tested against.",
-  "why_fields_are_recorded": [
-    "Earlier vector families carried only name, length and hex. That is not sufficient to catch a wrong layout, and this project has the proof.",
-    "The clean-room implementation (mcl-core/conformance/independent/) decoded AUTHORITY_CLAIM with an 8-bit authority_class and a 16-bit jurisdiction instead of 6 and 12. Because that object also carries 6 bits of padding, BOTH layouts consume exactly 14 bytes -- so the published vector passed, the length check passed, 'every byte consumed' passed, and round-tripping passed, while every field after source_ref was being misread.",
-    "Only comparing decoded VALUES found it. So every vector below records what each field must decode to. An implementer who passes this family has demonstrated they read the layout correctly, not merely that they counted bytes correctly.",
-    "Recorded in mcl-core/conformance/independent/SPEC_GAPS.md section 2."
-  ],
-  "stable_set": [
-    "PRESENCE",
-    "TRANSPORT_OFFER",
-    "TRANSPORT_ACCEPT"
-  ],
-  "candidate_objects_are_absent_deliberately": "HAZARD, REQUEST, AUTHORITY_CLAIM and DEGRADED_STATE are Candidate. Wire major 1 does not carry them at all (V1_SCOPE section 4.7), so there are no major-1 vectors for them and a decoder must REFUSE them at this major rather than look for a vector. The negative cases below assert exactly that.",
-  "vectors": [
-    {
-      "name": "PRESENCE",
-      "length": 10,
-      "hex": "10020badcafe00abcd3c",
-      "fields": {
-        "major": 1,
-        "category": 0,
-        "opcode": 0,
-        "priority": 1,
-        "source_ref": 195939070,
-        "capability_tag": 43981,
-        "ttl": 60
-      },
-      "note": "10 bytes, not 11. machine_class is absent from the Stable body -- V1_SCOPE section 4.8 and mcl-core/governance/MACHINE_CLASS_AUDIT.md. Absent is not 'class 0': there is no class 0, and a decoder must not surface one."
-    },
-    {
-      "name": "TRANSPORT_OFFER",
-      "length": 17,
-      "hex": "18040badcafe4d19420102c0d00d00011e",
-      "fields": {
-        "major": 1,
-        "category": 8,
-        "opcode": 0,
-        "priority": 2,
-        "source_ref": 195939070,
-        "migration_ref": 1293500929,
-        "transport_id": 2,
-        "profile_id": 192,
-        "endpoint_token": 3490512897,
-        "validity": 30
-      },
-      "note": "profile_id 192 is the Experimental Use value. No Stable profile identifier is assigned in v1.0, and this vector will be regenerated when one is -- profile_id travels on the wire, so assigning it changes these bytes."
-    },
-    {
-      "name": "TRANSPORT_ACCEPT",
-      "length": 16,
-      "hex": "180c0badcafe4d19420102c05e5510c7",
-      "fields": {
-        "major": 1,
-        "category": 8,
-        "opcode": 1,
-        "priority": 2,
-        "source_ref": 195939070,
-        "migration_ref": 1293500929,
-        "transport_id": 2,
-        "profile_id": 192,
-        "session_ref": 1582633159
-      },
-      "note": "Same experimental profile caveat as TRANSPORT_OFFER."
-    }
-  ],
-  "negative_vectors": [
-    {
-      "name": "HAZARD_at_major_1",
-      "hex": "130ea1000001017f00680100002878",
-      "must": "REJECT",
-      "reason": "HAZARD is Candidate. Wire major 1 does not carry it. A decoder must refuse on the category/opcode without decoding the body, and must not infer a layout from the fact that one exists at major 0."
-    },
-    {
-      "name": "PRESENCE_with_major_0_length",
-      "hex": "10020badcafe0000abcd3c",
-      "must": "REJECT",
-      "reason": "11 bytes at major 1. A major-1 PRESENCE is 10; the extra byte is a major-0 machine_class field that does not exist here. Accepting it would mean the decoder is not length-checking per major."
-    },
-    {
-      "name": "PRESENCE_truncated",
-      "hex": "10020badcafe00abcd",
-      "must": "REJECT",
-      "reason": "One byte short. Reported as truncation, not as a range error: more bytes could still complete it."
-    },
-    {
-      "name": "PRESENCE_at_unassigned_major",
-      "hex": "20020badcafe00abcd3c",
-      "must": "REJECT",
-      "reason": "Major 2 is unassigned. Unknown is refused, never guessed -- a decoder must not fall back to the nearest major it knows."
-    },
-    {
-      "name": "TRANSPORT_OFFER_zero_migration_ref",
-      "hex": "18040badcafe000000000102c0d00d00011e",
-      "must": "REJECT",
-      "reason": "migration_ref MUST NOT be zero. Zero is reserved so that an uninitialised field never names a live transaction."
-    },
-    {
-      "name": "TRANSPORT_OFFER_zero_transport_id",
-      "hex": "18040badcafe4d1942010002c0d00d00011e",
-      "must": "REJECT",
-      "reason": "transport_id MUST NOT be zero, so a zeroed field is never a valid bearer. Note this vector is also the wrong length, which a conforming decoder may reject on first -- either refusal is correct, and accepting is not."
-    }
-  ],
-  "verification": {
-    "generator": "The bytes were produced by mcl_wire_tier0_encode_at_major at MCL_WIRE_STABLE_MAJOR and are checked against the independent Python implementation by mcl-core/conformance/independent/test_independent.py.",
-    "runner": "mcl-wire/tools/validate_major1_vectors.c, run as part of the wire test suite.",
-    "independent_agreement": "Both implementations decode every positive vector to the field values recorded above and refuse every negative vector."
+ "vector_family": "tier0-major1-v1.0",
+ "status": "immutable",
+ "wire_major": 1,
+ "generated": "2026-09-04",
+ "supersedes_nothing": "This is a NEW family, not a revision. tier0-v0.1.json, tier0-v0.2.json and tier0-v0.3.json remain exactly as published: they record what major-0 implementations emit, and major 0 is permanent. Historical vectors are never rewritten to make newer code look compatible.",
+ "immutability": "Once released these bytes do not change. A defect found here is corrected by publishing a new family, never by editing this one -- an implementer who fetched this file must be able to trust that what they tested against is what everyone tested against.",
+ "why_fields_are_recorded": [
+  "Earlier vector families carried only name, length and hex. That is not sufficient to catch a wrong layout, and this project has the proof.",
+  "The clean-room implementation (mcl-core/conformance/independent/) decoded AUTHORITY_CLAIM with an 8-bit authority_class and a 16-bit jurisdiction instead of 6 and 12. Because that object also carries 6 bits of padding, BOTH layouts consume exactly 14 bytes -- so the published vector passed, the length check passed, 'every byte consumed' passed, and round-tripping passed, while every field after source_ref was being misread.",
+  "Only comparing decoded VALUES found it. So every vector below records what each field must decode to. An implementer who passes this family has demonstrated they read the layout correctly, not merely that they counted bytes correctly.",
+  "Recorded in mcl-core/conformance/independent/SPEC_GAPS.md section 2."
+ ],
+ "stable_set": [
+  "PRESENCE",
+  "TRANSPORT_OFFER",
+  "TRANSPORT_ACCEPT"
+ ],
+ "candidate_objects_are_absent_deliberately": "HAZARD, REQUEST, AUTHORITY_CLAIM and DEGRADED_STATE are Candidate. Wire major 1 does not carry them at all (V1_SCOPE section 4.7), so there are no major-1 vectors for them and a decoder must REFUSE them at this major rather than look for a vector. The negative cases below assert exactly that.",
+ "vectors": [
+  {
+   "name": "PRESENCE",
+   "length": 10,
+   "hex": "10020badcafe00abcd3c",
+   "fields": {
+    "major": 1,
+    "category": 0,
+    "opcode": 0,
+    "priority": 1,
+    "source_ref": 195939070,
+    "capability_tag": 43981,
+    "ttl": 60
+   },
+   "note": "10 bytes, not 11. machine_class is absent from the Stable body -- V1_SCOPE section 4.8 and mcl-core/governance/MACHINE_CLASS_AUDIT.md. Absent is not 'class 0': there is no class 0, and a decoder must not surface one."
   },
-  "field_values_note": "Every numeric field value here was COMPUTED from the hex, not converted by hand. The first draft of this file had hand-converted decimals and every 32-bit field was wrong; the validator caught all seven. Recorded because it is the same class of error the fields exist to catch, made while writing the mechanism that catches it."
+  {
+   "name": "TRANSPORT_OFFER",
+   "length": 17,
+   "hex": "18040badcafe4d1942010201d00d00011e",
+   "fields": {
+    "major": 1,
+    "category": 8,
+    "opcode": 0,
+    "priority": 2,
+    "source_ref": 195939070,
+    "migration_ref": 1293500929,
+    "transport_id": 2,
+    "profile_id": 1,
+    "endpoint_token": 3490512897,
+    "validity": 30
+   },
+   "note": "profile_id 1 is IP-DATAGRAM, the MCL Standards Action assignment of 2026-09-04 under transport_id 2. These bytes replace a pre-publication draft that carried the Experimental Use value 192; profile_id travels on the wire, so assigning it changed the vector. See pre_publication_revisions."
+  },
+  {
+   "name": "TRANSPORT_ACCEPT",
+   "length": 16,
+   "hex": "180c0badcafe4d19420102015e5510c7",
+   "fields": {
+    "major": 1,
+    "category": 8,
+    "opcode": 1,
+    "priority": 2,
+    "source_ref": 195939070,
+    "migration_ref": 1293500929,
+    "transport_id": 2,
+    "profile_id": 1,
+    "session_ref": 1582633159
+   },
+   "note": "Same assignment as TRANSPORT_OFFER. An accept names the profile it is accepting, so the value appears in both objects and both are fixed here."
+  }
+ ],
+ "negative_vectors": [
+  {
+   "name": "HAZARD_at_major_1",
+   "hex": "130ea1000001017f00680100002878",
+   "must": "REJECT",
+   "reason": "HAZARD is Candidate. Wire major 1 does not carry it. A decoder must refuse on the category/opcode without decoding the body, and must not infer a layout from the fact that one exists at major 0."
+  },
+  {
+   "name": "PRESENCE_with_major_0_length",
+   "hex": "10020badcafe0000abcd3c",
+   "must": "REJECT",
+   "reason": "11 bytes at major 1. A major-1 PRESENCE is 10; the extra byte is a major-0 machine_class field that does not exist here. Accepting it would mean the decoder is not length-checking per major."
+  },
+  {
+   "name": "PRESENCE_truncated",
+   "hex": "10020badcafe00abcd",
+   "must": "REJECT",
+   "reason": "One byte short. Reported as truncation, not as a range error: more bytes could still complete it."
+  },
+  {
+   "name": "PRESENCE_at_unassigned_major",
+   "hex": "20020badcafe00abcd3c",
+   "must": "REJECT",
+   "reason": "Major 2 is unassigned. Unknown is refused, never guessed -- a decoder must not fall back to the nearest major it knows."
+  },
+  {
+   "name": "TRANSPORT_OFFER_zero_migration_ref",
+   "hex": "18040badcafe000000000102c0d00d00011e",
+   "must": "REJECT",
+   "reason": "migration_ref MUST NOT be zero. Zero is reserved so that an uninitialised field never names a live transaction."
+  },
+  {
+   "name": "TRANSPORT_OFFER_zero_transport_id",
+   "hex": "18040badcafe4d1942010002c0d00d00011e",
+   "must": "REJECT",
+   "reason": "transport_id MUST NOT be zero, so a zeroed field is never a valid bearer. Note this vector is also the wrong length, which a conforming decoder may reject on first -- either refusal is correct, and accepting is not."
+  }
+ ],
+ "verification": {
+  "generator": "The bytes were produced by mcl_wire_tier0_encode_at_major at MCL_WIRE_STABLE_MAJOR and are checked against the independent Python implementation by mcl-core/conformance/independent/test_independent.py.",
+  "runner": "mcl-wire/tools/validate_major1_vectors.c, run as part of the wire test suite.",
+  "independent_agreement": "Both implementations decode every positive vector to the field values recorded above and refuse every negative vector."
+ },
+ "field_values_note": "Every numeric field value here was COMPUTED from the hex, not converted by hand. The first draft of this file had hand-converted decimals and every 32-bit field was wrong; the validator caught all seven. Recorded because it is the same class of error the fields exist to catch, made while writing the mechanism that catches it.",
+ "pre_publication_revisions": [
+  {
+   "date": "2026-09-04",
+   "what": "TRANSPORT_OFFER and TRANSPORT_ACCEPT regenerated to carry profile_id 1 instead of the Experimental Use value 192.",
+   "why": "The Standards Action assignment of IP-DATAGRAM = 1 was made on this date. profile_id travels inside both objects, so the assignment changes these bytes. Step 5 of the promotion sequence in GOVERNANCE.md section 4.3 requires the conformance evidence to be re-run on the final assigned bytes, and a vector family still carrying the experimental value would be evidence about the experimental value.",
+   "why_this_does_not_violate_immutability": "Immutability begins at publication. This family has never been published: no v1.0.0 tag exists and no implementer can have fetched it. Recording the revision here rather than silently rewriting is the difference between a corrected draft and a rewritten history. After v1.0.0 this block is closed and a defect is corrected by publishing a NEW family, never by editing this one.",
+   "previous_bytes": {
+    "TRANSPORT_OFFER": "18040badcafe4d19420102c0d00d00011e",
+    "TRANSPORT_ACCEPT": "180c0badcafe4d19420102c05e5510c7"
+   }
+  }
+ ]
 }
