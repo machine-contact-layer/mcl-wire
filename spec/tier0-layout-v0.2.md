@@ -1,6 +1,15 @@
 # MCL Wire Tier-0 Body Layout v0.2
 
-**Status:** Research Draft — **normative for the seven objects below at Wire major 0**
+**Status:** **Stable** for the three Stable objects — `PRESENCE`,
+`TRANSPORT_OFFER`, `TRANSPORT_ACCEPT` — at Wire major 1, whose bytes are frozen
+by the immutable major-1 vectors. **Research Draft** for the other four objects,
+which are carried at Wire major 0 only and whose meanings are not frozen.
+
+The split is the point: promoting the whole document would have frozen four
+object layouts the release explicitly does not claim, and leaving the whole
+document below Stable left the three that it does claim resting on a document
+that says it is not a basis for an implementation. Promoted 2026-09-06 under
+`mcl-core/governance/V1_SCOPE.md` §6.
 **Supersedes:** [tier0-candidate-layout-v0.1.md](tier0-candidate-layout-v0.1.md), which is
 marked "do not implement from this document" and describes a design that was not built.
 

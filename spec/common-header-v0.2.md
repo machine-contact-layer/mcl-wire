@@ -1,6 +1,15 @@
 # MCL Common Header Candidate v0.2
 
-Status: **Research Candidate, non-normative**
+Status: **Stable** for the major-1 common header. Major 0 remains Experimental and permanent.
+
+Promoted 2026-09-06 under `mcl-core/governance/V1_SCOPE.md` §6 on the §5.9
+three-part evidence: a clean-room implementation cross-decoding in both
+directions (C4, 803 checks), over-air between distinct devices on three
+bearers, and the stack compiled by a different toolchain for a different
+architecture. The status previously read "Research Candidate, non-normative"
+while `V1_SCOPE.md` §4 called the same header Stable at major 1, so a reader
+who believed the document and a reader who believed the scope table disagreed
+about whether they could implement against it.
 
 This study supersedes the direct `semantic_type` allocation in the v0.1 Tier-0 candidate while preserving a two-byte common header.
 

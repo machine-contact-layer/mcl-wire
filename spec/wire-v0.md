@@ -1,6 +1,13 @@
 # MCL Wire v0
 
-Status: **Research Draft**
+Status: **Stable** for the canonical encoding rules the major-1 surface relies
+on — padding, signed representation, size limits, unknown-critical-extension
+behaviour and version rejection. **Research Draft** for everything it says about
+objects and extensions that remain Candidate.
+
+Promoted 2026-09-06 under `mcl-core/governance/V1_SCOPE.md` §6. `V1_SCOPE.md`
+§4 has called these rules Stable since the major was cut; this document had not
+said so.
 
 ## 1. Objective
 
