@@ -90,7 +90,7 @@ one major from having observed the other.
 
 **Status.** Major 1 (`MCL_WIRE_STABLE_MAJOR`) is **cut** for v1.0. The codec
 encodes and decodes it, and the immutable major-1 vector family
-(`mcl-wire/vectors/tier0-major1-v1.0.json`) is frozen against it. Majors other
+(`mcl-wire/conformance/vectors/tier0-major1-v1.0.json`) is frozen against it. Majors other
 than 0 and 1 are unassigned and are refused, never guessed at.
 
 Cutting was gated on the Stable meanings closing (`V1_SCOPE.md` §5.8), because
