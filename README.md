@@ -2,7 +2,7 @@
 
 `mcl-wire` defines the canonical deterministic representation of Machine Contact Layer semantic objects.
 
-The specification is language-neutral. The primary pre-v0.1 reference implementation is **portable freestanding C99** so the same byte contract can be used on bare-metal microcontrollers, RTOS targets, larger embedded systems, and hosted systems.
+The specification is language-neutral. The v1.0 reference implementation is **portable freestanding C99** so the same byte contract can be used on bare-metal microcontrollers, RTOS targets, larger embedded systems, and hosted systems.
 
 ```text
 MCL Core semantic object
@@ -31,7 +31,7 @@ The C reference implementation:
 - supports freestanding builds with no required libc symbols;
 - keeps the wire specification authoritative over the code.
 
-## Current executable research subset
+## Major-0 research and historical subset
 
 The C reference implements seven Tier-0 layouts:
 
@@ -143,7 +143,7 @@ These are the figures the program prints today, and they have moved twice for re
 
 `benchmarks/results/source-codec-summary-v0.2.json` is the **retained v0.2 study** and is deliberately not rewritten to match. It records what was measured then.
 
-## Status
+## Stable v1.0 status
 
 **Wire major 1 is cut and is part of MCL v1.0.** It carries `PRESENCE`,
 `TRANSPORT_OFFER` and `TRANSPORT_ACCEPT` and refuses every other kind: a
