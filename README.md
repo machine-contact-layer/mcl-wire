@@ -59,10 +59,10 @@ unsettled. The authoritative count is not restated here, because a number
 written into prose rots the moment a field closes: it is derived from
 [`tier0-fields-v0.1.json`](../mcl-core/registries/tier0-fields-v0.1.json), which
 is machine-checked, and printed by the local gate run. Three
-of the seven objects are proposed Stable for v1 on that basis; see
+of the seven objects are Stable at major 1; see
 [`V1_SCOPE.md`](../mcl-core/governance/V1_SCOPE.md).
 
-It uses the current v0.2 16-bit common-header candidate:
+It uses the Stable major-1 v0.2 16-bit common header:
 
 ```text
 4 bits major wire version
@@ -81,13 +81,14 @@ The current encoded sizes remain:
 | REQUEST | 17 |
 | AUTHORITY_CLAIM | 14 |
 | DEGRADED_STATE | 10 |
-| TRANSPORT_OFFER | 13 |
+| TRANSPORT_OFFER | 17 |
 
-`TRANSPORT_OFFER` uses an 8-bit transport identifier and remains 13 bytes after padding.
+`TRANSPORT_OFFER` uses an 8-bit transport identifier and is 17 bytes.
 
 ## Canonical extension envelope
 
-The C reference includes the research extension envelope described in `research/extension-envelope-v0.1.md`:
+The C reference includes the Candidate/Experimental extension envelope described
+in [`spec/tier0-extensions-v0.1.md`](spec/tier0-extensions-v0.1.md):
 
 ```text
 extension_key = uvarint((extension_id << 1) | critical)

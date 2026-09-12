@@ -13,8 +13,9 @@ that says it is not a basis for an implementation. Promoted 2026-09-06 under
 **Supersedes:** [tier0-candidate-layout-v0.1.md](tier0-candidate-layout-v0.1.md), which is
 marked "do not implement from this document" and describes a design that was not built.
 
-This document defines, bit for bit, the seven Tier-0 object bodies the reference
-implementation actually encodes.
+This document defines, bit for bit, the Tier-0 object bodies the reference
+implementation actually encodes. The machine-readable registry, not this prose,
+is authoritative for the current assignment inventory.
 
 ---
 

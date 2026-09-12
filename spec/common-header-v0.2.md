@@ -1,4 +1,4 @@
-# MCL Common Header Candidate v0.2
+# MCL Common Header v0.2
 
 Status: **Stable** for the major-1 common header. Major 0 remains Experimental and permanent.
 
@@ -29,7 +29,7 @@ MCL Core already defines 20 semantic message classes, including 15 current Tier-
 
 Using nearly the entire globally shared type space before v0.1 would make decades-long extensibility dependent on ad-hoc escape behavior.
 
-## 2. v0.2 candidate
+## 2. v0.2 layout
 
 ```text
 15            12 11             8 7              3 2       1 0
@@ -173,11 +173,10 @@ This candidate remains 16 bits, so the previously measured v0.1 frame byte count
 
 The existing source-codec benchmark remains useful for size comparison, but future golden vectors should use v0.2 header semantics.
 
-## 9. Promotion gates
+## 9. Promotion record
 
-This header does not become canonical until:
-- registry policy is reviewed;
-- negative unknown-code tests exist;
-- extension framing is defined;
-- context/version negotiation is integrated;
-- at least two independent implementations round-trip the same vectors.
+Major 1 is canonical and Stable for the scope stated above. Its promotion was
+supported by registry governance, negative unknown-code tests, immutable
+major-1 vectors, the independently implemented C4 decoder, and the Stable
+negotiation contract. Extension framing remains Candidate/Experimental and is
+not a prerequisite for interpreting a major-1 object with `E = 0`.

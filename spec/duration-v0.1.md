@@ -1,6 +1,7 @@
 # Wire duration codes v0.1
 
-**Status:** Research Draft
+**Status:** **Stable** for the `ttl` and `validity` encoding used by the three
+Stable Tier-0 objects at Wire major 1. Research Draft for all other uses.
 **Layer:** Wire
 **Reference implementation:** `mcl-wire/include/mcl/wire.h`, `mcl-wire/src/wire.c`
 **Tests:** `mcl-wire/tests/test_duration.c`
