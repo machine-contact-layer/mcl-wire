@@ -72,16 +72,18 @@ It uses the Stable major-1 v0.2 16-bit common header:
 1 bit extension-present
 ```
 
-The current encoded sizes remain:
+The encoded sizes differ where the Stable major-1 body removes `machine_class`;
+the table makes both wire majors explicit:
 
-| Object | Bytes |
-|---|---:|
-| PRESENCE | 11 |
-| HAZARD | 15 |
-| REQUEST | 17 |
-| AUTHORITY_CLAIM | 14 |
-| DEGRADED_STATE | 10 |
-| TRANSPORT_OFFER | 17 |
+| Object | Major 0 bytes | Major 1 bytes |
+|---|---:|---:|
+| PRESENCE | 11 | 10 |
+| HAZARD | 15 | — |
+| REQUEST | 17 | — |
+| AUTHORITY_CLAIM | 14 | — |
+| DEGRADED_STATE | 10 | — |
+| TRANSPORT_OFFER | 13 | 17 |
+| TRANSPORT_ACCEPT | 16 | 16 |
 
 `TRANSPORT_OFFER` uses an 8-bit transport identifier and is 17 bytes.
 
