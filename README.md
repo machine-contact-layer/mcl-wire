@@ -1,6 +1,46 @@
-# MCL Wire
+<p align="center">
+  <img src="https://raw.githubusercontent.com/machine-contact-layer/.github/main/profile/banner.png" alt="OJOBIT" width="100%">
+</p>
 
-`mcl-wire` defines the canonical deterministic representation of Machine Contact Layer semantic objects.
+<h1 align="center">MCL Wire</h1>
+
+<p align="center"><strong>The exact bytes. One canonical encoding for every MCL object, on every transport.</strong></p>
+
+<p align="center">
+  <a href="https://github.com/machine-contact-layer/mcl-wire/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/machine-contact-layer/mcl-wire/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/machine-contact-layer/mcl-wire/blob/main/LICENSE"><img alt="License Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
+  <img alt="Wire major 1" src="https://img.shields.io/badge/wire%20major-1%20Stable-brightgreen">
+  <img alt="C99 freestanding" src="https://img.shields.io/badge/C99-freestanding-informational">
+</p>
+
+<p align="center">
+  <a href="https://github.com/machine-contact-layer/mcl-sdk"><b>Use the SDK instead</b></a> ·
+  <a href="https://github.com/machine-contact-layer/mcl-core"><b>Specifications</b></a> ·
+  <a href="https://github.com/machine-contact-layer/mcl-link"><b>mcl-link</b></a>
+</p>
+
+---
+
+> ### Most people should start with the SDK, not here
+>
+> This repository is a **specification**. If you are building a product, start
+> with [**mcl-sdk**](https://github.com/machine-contact-layer/mcl-sdk): its quickstart runs two machines making
+> contact, and the release ships a self-contained developer SDK — one CMake
+> project, no sibling checkout. Come back here when you need to know exactly
+> what a byte means, or when you are writing an independent implementation.
+
+## Why this exists
+
+Two machines can only agree on meaning if they first agree, byte for byte, on
+representation. MCL Wire is that agreement: one canonical encoding, no
+optional orderings, no implementation-defined padding, and the same result on a
+microcontroller and a server.
+
+An encoder that produces different bytes for the same object is wrong, and the
+conformance vectors in this repository are how you find out.
+
+**Wire major 1 is Stable.** Major 0 remains for experimental objects; a Stable
+major carries only Stable semantics, and the encoder refuses anything else.
 
 The specification is language-neutral. The v1.0 reference implementation is **portable freestanding C99** so the same byte contract can be used on bare-metal microcontrollers, RTOS targets, larger embedded systems, and hosted systems.
 
